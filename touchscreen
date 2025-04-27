@@ -178,12 +178,12 @@ while true do
             monitor.setTextColor(colors.white)
             
             -- First line (System)
-            monitor.setCursorPos(5, 2)
+            monitor.setCursorPos(4, 2)
             monitor.write("==          System          ==")
             
             -- Second line (Shutdown) → evenly spaced
-            monitor.setCursorPos(5, 4)
-            monitor.write("==         Shutdown         ==")
+            monitor.setCursorPos(4, 4)
+            monitor.write("==          Shutdown          ==")
             
             sleep(1)
             
