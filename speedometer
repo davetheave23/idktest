@@ -1,21 +1,25 @@
--- Full corrected code for dual speedometers with smooth hand animation and correct shortest rotation
+print("Speedometer: Starting up...")
 
-local monitorName = "top"
+local monitorName = "top" -- CHANGE if needed
 local leftTrackName = "back"
 local rightTrackName = "bottom"
 local inputSide = "right"
 
+print("Wrapping peripherals...")
 local monitor = peripheral.wrap(monitorName)
 local leftTrack = peripheral.wrap(leftTrackName)
 local rightTrack = peripheral.wrap(rightTrackName)
 
 if not monitor then
-    print("Monitor not found")
+    print("ERROR: Monitor not found on side: "..monitorName)
     return
 end
 
+print("Monitor found on side: "..monitorName)
+
 monitor.setTextScale(0.5)
 local monitorWidth, monitorHeight = monitor.getSize()
+print("Monitor size: "..monitorWidth.."x"..monitorHeight)
 
 local function clearMonitor()
     monitor.setBackgroundColor(colors.black)
@@ -90,11 +94,15 @@ local function drawDial(cx, cy, radius, angle, speed, isConnected)
 end
 
 local function getRawSpeed(track, lineNum)
-    if not track then return 0 end
+    if not track then
+        print("WARNING: No track found for line "..lineNum)
+        return 0
+    end
 
     local success, data = pcall(function() return track.getLine(lineNum) end)
 
     if not success then
+        print("WARNING: Failed to get line "..lineNum)
         return 0
     end
 
@@ -117,7 +125,6 @@ local function getRawSpeed(track, lineNum)
     return rawSpeed
 end
 
--- Speed to angle conversion
 local function speedToAngle(speed)
     local maxSpeed = 100
     if speed > maxSpeed then speed = maxSpeed end
@@ -136,7 +143,6 @@ local function speedToAngle(speed)
     end
 end
 
--- Move angle toward target angle, shortest path
 local function moveAngleTowards(current, target, step)
     local diff = (target - current + 360) % 360
     if diff == 0 then
@@ -150,20 +156,18 @@ local function moveAngleTowards(current, target, step)
     end
 end
 
--- Initialize displayed angles and speeds
 local displayedLeftAngle = 270
 local displayedRightAngle = 270
 local displayedLeftSpeed = 0
 local displayedRightSpeed = 0
 
-print("Starting speedometer. Press Ctrl+T to terminate.")
+print("Speedometer main loop starting...")
 
--- Main event loop
 while true do
     local event = os.pullEvent()
 
     if event == "shutdown_speedometer" then
-        print("Shutdown signal received for speedometer!")
+        print("Received shutdown event, exiting speedometer...")
         clearMonitor()
         monitor.setBackgroundColor(colors.black)
         monitor.clear()
@@ -171,10 +175,7 @@ while true do
         term.clear()
         term.setCursorPos(1, 1)
         break
-    elseif event == "timer" or event == "redstone" then
-        -- Ignore timer/redstone events directly
     else
-        -- Main drawing update (still every frame)
         if not inputSide or redstone.getInput(inputSide) then
             clearMonitor()
 
@@ -184,14 +185,12 @@ while true do
             local targetLeftAngle = speedToAngle(leftSpeed)
             local targetRightAngle = speedToAngle(rightSpeed)
 
-            -- Smooth angle movement
-            displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5) -- 5 degrees per frame
+            displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5)
             displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
 
             displayedLeftSpeed = leftSpeed
             displayedRightSpeed = rightSpeed
 
-            -- Draw dials
             drawDial(10, 8, 7, displayedLeftAngle, displayedLeftSpeed, leftTrack ~= nil)
             drawDial(30, 8, 7, displayedRightAngle, displayedRightSpeed, rightTrack ~= nil)
 
@@ -205,3 +204,5 @@ while true do
 
     sleep(0.1)
 end
+
+print("Speedometer: Fully shut down.")
