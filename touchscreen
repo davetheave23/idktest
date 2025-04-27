@@ -1,4 +1,4 @@
--- Train Touchscreen Panel 1x4 Monitor, Full Words, Vertical Dividers, Big Text, Lock Feature
+-- Train Touchscreen Panel 1x4 Monitor, Centered Text, Vertical Dividers, Full Words, Lock Feature
 
 local monitorName = "front" -- adjust if needed
 local monitor = peripheral.wrap(monitorName)
@@ -8,7 +8,7 @@ if not monitor then
     return
 end
 
-monitor.setTextScale(1) -- <<< Back to big normal text size
+monitor.setTextScale(1) -- Big normal text
 local monitorWidth, monitorHeight = monitor.getSize()
 
 -- Check monitor size
@@ -31,22 +31,32 @@ local function drawButtons()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
 
-    -- Draw vertical divider bars
+    -- Draw vertical divider lines between sections
     monitor.setTextColor(colors.white)
-    for divider = 2, 3 do
-        monitor.setCursorPos(divider, 1)
-        monitor.write("|")
+
+    -- Dividers at x=11, x=21, x=31 if we treat 51 pixels across a large monitor
+    -- But on a 1x4 monitor, it's simpler:
+    -- Let's draw manually between each block visually
+    for i = 1, 3 do
+        local dividerX = math.floor((i * monitorWidth) / 4) + 1
+        for y = 1, monitorHeight do
+            monitor.setCursorPos(dividerX, y)
+            monitor.write("|")
+        end
     end
 
     -- Draw button labels
     for _, btn in ipairs(buttons) do
-        -- Center the button names inside their blocks
         local sectionWidth = monitorWidth / 4
         local x1 = (btn.section - 1) * sectionWidth + 1
         local x2 = btn.section * sectionWidth
+
+        -- Center the text horizontally
         local labelLength = #btn.name
         local labelX = math.floor((x1 + x2) / 2) - math.floor(labelLength / 2)
-        local labelY = 1
+
+        -- Center the text vertically
+        local labelY = math.floor(monitorHeight / 2)
 
         monitor.setCursorPos(labelX, labelY)
 
