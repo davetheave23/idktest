@@ -1,88 +1,133 @@
--- First, wrap the monitor to the computer (change the side if needed)
-local monitor = peripheral.wrap("top")  -- Use the side where your monitor is connected
+-- Startup animation using Tom's Peripherals and base ComputerCraft
+local monitor = peripheral.find("monitor") -- Use a standard monitor peripheral
+local modem = peripheral.find("modem")
+local rd = peripheral.find("redstone_integrator") -- Tom's Peripherals redstone integrator
 
--- Set text scale for better readability (but smaller than before)
-monitor.setTextScale(0.75)  -- Smaller text size for proper fitting
+-- Configure monitor settings
+monitor.setTextScale(0.5) -- Small text for higher resolution
+local width, height = monitor.getSize()
 monitor.clear()
 
--- 1. Program Start Screen
-function displayStartScreen()
-    monitor.setCursorPos(5, 5)
-    monitor.setTextColor(colors.white)
-    monitor.write("==      Program    ==")
-    
-    monitor.setCursorPos(5, 6)
-    monitor.write("==         Start        ==")
-    sleep(2)  -- Sleep for 2 seconds before diagnostics
-end
+-- Colors
+local WHITE = colors.white
+local BLUE = colors.blue
+local BLACK = colors.black
 
--- 2. Diagnostics
-function runDiagnostics()
-    monitor.clear()
-    monitor.setCursorPos(5, 5)
-    monitor.setTextColor(colors.white)
-    monitor.write("Running Diagnostics...")
-    sleep(1)
-
-    local diagnostics = {
-        {"CPU Check", "ok", colors.green},
-        {"RAM Check", "ok", colors.green},
-        {"Disk Check", "fail", colors.red},
-        {"Network Check", "ok", colors.green},
-        {"Graphics Check", "ok", colors.green},
-        {"Battery Check", "fail", colors.red},
-    }
-
-    for i, diag in ipairs(diagnostics) do
-        -- Add a small delay between each diagnostic line
-        sleep(0.5)
-        monitor.setCursorPos(5, 5 + i)
-        monitor.write(diag[1] .. ": ")
-        monitor.setTextColor(diag[3])  -- Use the specified color
-        monitor.write(diag[2])
+-- Helper function to draw filled rectangle
+local function filledRectangle(x, y, width, height, color)
+    monitor.setBackgroundColor(color)
+    for yPos = y, y + height - 1 do
+        monitor.setCursorPos(x, yPos)
+        monitor.write(string.rep(" ", width))
     end
-    sleep(3)  -- Sleep for 3 seconds before showing the logo
+    monitor.setBackgroundColor(colors.black) -- Reset color
 end
 
--- 3. Logo Display with Triangle and Text
-function displayLogo()
+-- Helper function to draw text
+local function drawText(x, y, text, textColor, backgroundColor)
+    monitor.setCursorPos(x, y)
+    monitor.setTextColor(textColor)
+    monitor.setBackgroundColor(backgroundColor)
+    monitor.write(text)
+    monitor.setTextColor(colors.white) -- Reset color
+    monitor.setBackgroundColor(colors.black) -- Reset color
+end
+
+-- Main screen initialization function
+local function screenInitialization()
     monitor.clear()
+    
+    -- Scale the coordinates from the original example to fit monitor dimensions
+    local scaleX = width / 384
+    local scaleY = height / 320
+    
+    -- Draw the interface elements
+    filledRectangle(1, math.floor(32 * scaleY), math.floor(384 * scaleX), math.floor(4 * scaleY), WHITE)
+    filledRectangle(math.floor(184 * scaleX), math.floor(34 * scaleY), math.floor(16 * scaleX), math.floor(2 * scaleY), BLUE)
+    filledRectangle(math.floor(188 * scaleX), math.floor(32 * scaleY), math.floor(8 * scaleX), math.floor(2 * scaleY), BLUE)
+    filledRectangle(math.floor(40 * scaleX), math.floor(256 * scaleY), math.floor(252 * scaleX), math.floor(4 * scaleY), WHITE)
+    filledRectangle(math.floor(288 * scaleX), math.floor(32 * scaleY), math.floor(4 * scaleX), math.floor(288 * scaleY), WHITE)
+    filledRectangle(1, math.floor(316 * scaleY), math.floor(384 * scaleX), math.floor(4 * scaleY), WHITE)
+    filledRectangle(math.floor(44 * scaleX), math.floor(256 * scaleY), math.floor(44 * scaleX), math.floor(4 * scaleY), WHITE)
+    filledRectangle(1, math.floor(284 * scaleY), math.floor(42 * scaleX), math.floor(4 * scaleY), WHITE)
+    filledRectangle(math.floor(40 * scaleX), math.floor(32 * scaleY), math.floor(4 * scaleX), math.floor(256 * scaleY), WHITE)
+    filledRectangle(math.floor(41 * scaleX), math.floor(160 * scaleY), math.floor(3 * scaleX), math.floor(15 * scaleY), BLUE)
+    filledRectangle(math.floor(40 * scaleX), math.floor(165 * scaleY), math.floor(1 * scaleX), math.floor(5 * scaleY), BLUE)
+    
+    filledRectangle(math.floor(40 * scaleX), math.floor(288 * scaleY), math.floor(4 * scaleX), math.floor(32 * scaleY), WHITE)
+    filledRectangle(math.floor(118 * scaleX), math.floor(256 * scaleY), math.floor(4 * scaleX), math.floor(64 * scaleY), WHITE)
+    filledRectangle(math.floor(210 * scaleX), math.floor(256 * scaleY), math.floor(4 * scaleX), math.floor(64 * scaleY), WHITE)
+    
+    -- Uncomment to add labels
+    --[[
+    drawText(math.floor(176 * scaleX), math.floor(16 * scaleY), "180", WHITE, BLACK)
+    
+    drawText(math.floor(5 * scaleX), math.floor(60 * scaleY), " 20", WHITE, BLACK)
+    drawText(1, math.floor(64 * scaleY), ">", WHITE, BLACK)
+    drawText(1, math.floor(88 * scaleY), "-", WHITE, BLACK) 
+    drawText(math.floor(5 * scaleX), math.floor(110 * scaleY), " 10", WHITE, BLACK)
+    drawText(1, math.floor(114 * scaleY), ">", WHITE, BLACK)
+    drawText(1, math.floor(138 * scaleY), "-", WHITE, BLACK)
+    drawText(math.floor(5 * scaleX), math.floor(160 * scaleY), " 0", WHITE, BLACK)
+    drawText(1, math.floor(164 * scaleY), ">", WHITE, BLACK)
+    drawText(1, math.floor(188 * scaleY), "-", WHITE, BLACK)
+    drawText(math.floor(5 * scaleX), math.floor(210 * scaleY), "-10", WHITE, BLACK)
+    drawText(1, math.floor(214 * scaleY), ">", WHITE, BLACK)
+    drawText(1, math.floor(238 * scaleY), "-", WHITE, BLACK)
+    drawText(math.floor(5 * scaleX), math.floor(260 * scaleY), "-20", WHITE, BLACK)
+    drawText(1, math.floor(264 * scaleY), ">", WHITE, BLACK)
+    --]]
+end
 
-    -- Draw the triangle shape (inverted triangle, base at top, tip at the bottom)
-    monitor.setTextColor(colors.white)
-    for i = 1, 15 do
-        -- Draw both sides of the triangle
-        monitor.setCursorPos(5 + i, 5)
-        monitor.write("*")
-        monitor.setCursorPos(5 + i, 5 + i)
-        monitor.write("*")
+-- Helper function to write info to file
+local function writeInfo(text, txt)
+    local fileName = tostring(txt)
+    local file = fs.open(fileName, "w")
+    file.write(text)
+    file.close()
+end
+
+-- Initialize screen and start the program
+screenInitialization()
+sleep(0.1)
+screenInitialization()
+
+-- Open wireless channel if modem is present
+if modem then
+    modem.open(17068)
+    print("Wireless channel 17068 opened")
+else
+    print("Warning: No modem found")
+end
+
+-- Main loop
+local bullet = "bulletLeft.txt"
+while true do
+    -- Listen for modem messages or other events
+    local event, side, channel, replyChannel, message, distance
+    
+    -- Check for redstone signal from Tom's Peripheral
+    local redstoneSignal = rd and rd.getInput("back") or false
+    
+    -- Process modem messages
+    if modem then
+        event, side, channel, replyChannel, message, distance = os.pullEvent("modem_message")
+        if channel == 17068 then
+            local receiveMessage = message
+            writeInfo(receiveMessage, bullet)
+            screenInitialization()
+        end
+    else
+        -- If no modem, just wait for redstone signal changes
+        os.pullEvent("redstone")
+        screenInitialization()
     end
-
-    -- Text over the triangle
-    local width, height = monitor.getSize()
     
-    -- Centering "TO SEARCH" and "AND" text
-    monitor.setCursorPos(math.floor((width - 11) / 2), 6)
-    monitor.setTextColor(colors.white)
-    monitor.write("TO SEARCH")
+    -- Add additional functionality for redstone integration
+    if redstoneSignal then
+        writeInfo("Redstone signal detected", "redstone.txt")
+    end
     
-    monitor.setCursorPos(math.floor((width - 3) / 2), 7)
-    monitor.setTextColor(colors.white)
-    monitor.write("AND")
-    
-    monitor.setCursorPos(math.floor((width - 7) / 2), 8)
-    monitor.setTextColor(colors.red)  -- Make the "DESTROY" part red
-    monitor.write("DESTROY")
-    
-    sleep(5)  -- Sleep for 5 seconds to display the logo
+    -- Refresh screen periodically
+    sleep(0.1)
 end
-
--- Main function to run everything
-function main()
-    displayStartScreen()
-    runDiagnostics()
-    displayLogo()
-end
-
--- Run the main function
-main()
