@@ -1,0 +1,20 @@
+local gpu = peripheral.wrap("top")
+
+-- Set resolution (if available)
+gpu.setResolution(64, 64)
+
+-- Clear the screen
+gpu.clear()
+
+-- Set some text
+gpu.set(1, 1, "Hello, world!")
+
+-- Set background color (optional)
+gpu.setBackgroundColor(colors.black)
+gpu.clear()
+
+-- Set text color
+gpu.setTextColor(colors.white)
+
+-- Draw text on the screen
+gpu.set(10, 10, "Test Text")
