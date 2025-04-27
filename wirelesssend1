@@ -1,0 +1,17 @@
+-- Sender side
+local modem = peripheral.wrap("front") -- modem is on front
+local channel = 1
+
+while true do
+    if redstone.getInput("back") then
+        modem.transmit(channel, channel, "button_pressed")
+        print("Button pressed, message sent")
+        
+        -- Wait until button is released before continuing
+        while redstone.getInput("back") do
+            sleep(0.1)
+        end
+    end
+
+    sleep(0.1) -- small delay so it doesn't hog CPU
+end
