@@ -1,4 +1,4 @@
--- Train Touchscreen Panel - Instant Start + Wireless Shutdown Corrected Version
+-- Train Touchscreen Panel - Instant Start + Wireless Shutdown + Custom Message
 
 local monitorName = "front" -- Adjust if needed
 local modemSide = "bottom"  -- Wireless modem side
@@ -105,7 +105,9 @@ end
 
 local function handleButtonPress(name)
     local btn = getButtonByName(name)
-    if not btn then return end
+    if not btn then
+        return
+    end
 
     if locked and name ~= "Lock" then
         print("Panel is locked. No action.")
@@ -169,14 +171,22 @@ while true do
         if modemChannel == channel and tostring(message) == "button_pressed" then
             print("Shutdown signal received!")
 
-            -- Goodbye message
+            -- Custom System Shutdown message
             monitor.setBackgroundColor(colors.black)
             monitor.clear()
             monitor.setTextColor(colors.white)
-            monitor.setCursorPos(math.floor(monitorWidth / 2) - 3, math.floor(monitorHeight / 2))
-            monitor.write("Goodbye")
+
+            -- First line
+            monitor.setCursorPos(math.floor(monitorWidth / 2) - 10, math.floor(monitorHeight / 2) - 1)
+            monitor.write("==          System          ==")
+
+            -- Second line
+            monitor.setCursorPos(math.floor(monitorWidth / 2) - 10, math.floor(monitorHeight / 2) + 1)
+            monitor.write("==        Shutdown        ==")
+
             sleep(1)
 
+            -- Full cleanup
             monitor.setBackgroundColor(colors.black)
             monitor.clear()
             term.setBackgroundColor(colors.black)
