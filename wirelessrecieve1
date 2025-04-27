@@ -1,14 +1,13 @@
--- Receiver side - Simple: button press instantly starts finalscreen
-
-local modem = peripheral.wrap("bottom") -- Wireless modem under computer
+-- Receiver side
+local modem = peripheral.wrap("bottom") -- Wireless modem on bottom
 local channel = 1
 
 if not modem then
-    print("No modem found on bottom!")
+    print("No modem found!")
     return
 end
 
-rednet.open("bottom")
+modem.open(channel)
 
 print("Waiting for button press...")
 
@@ -18,7 +17,7 @@ while true do
     if senderChannel == channel and message == "button_pressed" then
         print("Button pressed. Starting Finalscreen.")
 
-        shell.run("finalscreen.lua")
-        break -- Once finalscreen exits (shutdown), end program
+        -- OPEN FINALSCREEN IN A NEW TAB!
+        shell.openTab("finalscreen.lua")
     end
 end
