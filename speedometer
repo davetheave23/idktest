@@ -1,0 +1,191 @@
+-- Full corrected code for dual speedometers with proper direction indicators
+-- Setup - ADJUSTED for correct peripheral locations
+local monitorName = "top" -- change if needed
+local leftTrackName = "back" -- changed from "left" to "back"
+local rightTrackName = "bottom" -- changed from "right" to "bottom" 
+local inputSide = "right" -- redstone input side (lever or button)
+
+-- Get peripherals
+local monitor = peripheral.wrap(monitorName)
+local leftTrack = peripheral.wrap(leftTrackName)
+local rightTrack = peripheral.wrap(rightTrackName)
+
+-- Basic checks
+if not monitor then
+    print("Monitor not found")
+    return
+end
+
+-- Set monitor scale
+monitor.setTextScale(0.5)
+local monitorWidth, monitorHeight = monitor.getSize()
+
+-- Monitor clear function
+local function clearMonitor()
+    monitor.setBackgroundColor(colors.black)
+    monitor.clear()
+end
+
+-- Draw point at specified coordinates - simple and reliable
+local function drawPoint(x, y, char, color)
+    if x >= 1 and x <= monitorWidth and y >= 1 and y <= monitorHeight then
+        monitor.setCursorPos(math.floor(x), math.floor(y))
+        monitor.setTextColor(color or colors.white)
+        monitor.write(char or "o")
+    end
+end
+
+-- Draw circle outline
+local function drawCircle(cx, cy, radius, isConnected)
+    for i = 0, 360, 3 do
+        local rad = math.rad(i)
+        local x = cx + math.cos(rad) * radius
+        local y = cy + math.sin(rad) * radius
+        drawPoint(x, y, "*", isConnected and colors.lime or colors.red)
+    end
+    
+    -- Mark key points - SWAPPED F and R
+    drawPoint(cx, cy - radius + 1, "0", colors.yellow) -- Top = 270°
+    drawPoint(cx + radius - 1, cy, "F", colors.yellow) -- Right = 0° - CHANGED FROM R TO F
+    drawPoint(cx - radius + 1, cy, "R", colors.yellow) -- Left = 180° - CHANGED FROM F TO R
+end
+
+-- Draw dial with working hand movement
+local function drawDial(cx, cy, radius, speed, isConnected)
+    -- Draw dial circle and key points
+    drawCircle(cx, cy, radius, isConnected)
+    
+    -- Draw the dial hand (only if connected)
+    if isConnected then
+        -- Calculate angle based on speed
+        local maxSpeed = 100 -- max speed for full deflection
+        if speed > maxSpeed then speed = maxSpeed end
+        if speed < -maxSpeed then speed = -maxSpeed end
+        
+        -- Angle calculation using mathematical angles (0° = right, 90° = down, 180° = left, 270° = up)
+        local angle
+        if speed == 0 then
+            angle = 270 -- pointing up
+        elseif speed > 0 then
+            -- For positive speed, rotate from up (270°) towards right (0°) - CHANGED DIRECTION
+            -- Map speed 0->100 to angle 270->0
+            angle = 270 + (speed/maxSpeed * 90)
+        else
+            -- For negative speed, rotate from up (270°) towards left (180°) - CHANGED DIRECTION
+            -- Map speed 0->-100 to angle 270->180
+            angle = 270 - (math.abs(speed)/maxSpeed * 90)
+        end
+        
+        -- Convert to radians
+        local rad = math.rad(angle)
+        
+        -- Draw needle from center outward
+        local needleLength = radius - 2
+        
+        -- Draw multiple points to make a thicker hand
+        for i = 1, needleLength do
+            local handX = cx + math.cos(rad) * i
+            local handY = cy + math.sin(rad) * i
+            
+            if i == needleLength then
+                -- Needle tip
+                drawPoint(handX, handY, "@", colors.red)
+            elseif i > needleLength * 0.7 then
+                -- Needle shaft near tip
+                drawPoint(handX, handY, "|", colors.orange)
+            else
+                -- Needle base
+                drawPoint(handX, handY, "|", colors.white)
+            end
+        end
+        
+        -- Draw center hub
+        drawPoint(cx, cy, "+", colors.cyan)
+    else
+        -- If not connected, just draw an X in the center
+        drawPoint(cx, cy, "X", colors.red)
+    end
+    
+    -- Draw speed values at bottom (absolute value)
+    local speedText = isConnected and tostring(math.abs(math.floor(speed))) or "N/A"
+    local direction = ""
+    if isConnected then
+        if speed > 0 then
+            direction = "F" -- Forward - CONSISTENT with dial marker
+        elseif speed < 0 then
+            direction = "R" -- Reverse - CONSISTENT with dial marker
+        end
+    end
+    
+    -- Display speed and direction
+    monitor.setCursorPos(cx - #speedText/2, cy + radius + 1)
+    monitor.setTextColor(colors.white)
+    monitor.write(speedText)
+    
+    if direction ~= "" then
+        monitor.setCursorPos(cx + #speedText/2 + 1, cy + radius + 1)
+        monitor.setTextColor(speed > 0 and colors.lime or colors.red)
+        monitor.write(direction)
+    end
+end
+
+-- Get raw speed data without changing sign
+local function getRawSpeed(track, lineNum)
+    if not track then return 0 end
+    
+    -- Try to get the line data
+    local success, data = pcall(function() return track.getLine(lineNum) end)
+    
+    if not success then
+        return 0
+    end
+    
+    -- Parse speed value based on data type
+    local rawSpeed = 0
+    
+    if type(data) == "table" then
+        if data.text then
+            local speedStr = tostring(data.text):match("-?%d+%.?%d*")
+            rawSpeed = tonumber(speedStr) or 0
+        elseif data.value then
+            rawSpeed = tonumber(data.value) or 0
+        end
+    elseif type(data) == "string" then
+        local speedStr = data:match("-?%d+%.?%d*")
+        rawSpeed = tonumber(speedStr) or 0
+    elseif type(data) == "number" then
+        rawSpeed = data
+    end
+    
+    return rawSpeed
+end
+
+-- Main loop
+print("Starting speedometer. Press Ctrl+T to terminate.")
+while true do
+    if not inputSide or redstone.getInput(inputSide) then
+        clearMonitor()
+        
+        -- Read raw speeds without modifying the sign
+        local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
+        local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
+
+        -- Debug: Print speeds to console
+        print("Left speed: " .. leftSpeed .. ", Right speed: " .. rightSpeed)
+        
+        -- Draw left dial
+        drawDial(10, 8, 7, leftSpeed, leftTrack ~= nil)
+        
+        -- Draw right dial
+        drawDial(30, 8, 7, rightSpeed, rightTrack ~= nil)
+        
+        -- Connection status
+        monitor.setCursorPos(1, 1)
+        monitor.setTextColor(colors.yellow)
+        monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
+    else
+        -- If lever off, turn off screen
+        clearMonitor()
+    end
+    sleep(0.1)
+end
