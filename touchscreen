@@ -1,20 +1,23 @@
--- Train Touchscreen Panel - Instant Start Version (No Wireless Activation Needed)
+-- Train Touchscreen Panel - Instant Start Version WITH Wireless Shutdown Support
 
 local monitorName = "front" -- Adjust if needed
+local modemSide = "bottom"  -- Modem side
 
 local monitor = peripheral.wrap(monitorName)
+local modem = peripheral.wrap(modemSide)
 
-if not monitor then
-    print("Monitor not found!")
+if not monitor or not modem then
+    print("Monitor or modem not found!")
     return
 end
+
+rednet.open(modemSide)
 
 monitor.setTextScale(1) -- Big text
 local monitorWidth, monitorHeight = monitor.getSize()
 
 print("Monitor size detected: "..monitorWidth.."x"..monitorHeight)
 
--- Define button sections and sides
 local buttons = {
     {name = "Hatch", section = 1, side = "back", toggle = true, active = false},
     {name = "Lights", section = 2, side = "left", toggle = true, active = false},
@@ -24,14 +27,14 @@ local buttons = {
 
 local locked = false -- Lock state
 local smokeTimer = nil -- Timer for smoke activation
-local poweredOn = true -- Instant start: poweredOn is always true
+local poweredOn = true -- Instant start
 
--- Helper: Draw everything
+-- Helper functions
 local function drawButtons()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
 
-    -- Draw vertical dividers
+    -- Dividers
     monitor.setTextColor(colors.white)
     for i = 1, 3 do
         local dividerX = math.floor((i * monitorWidth) / 4) + 1
@@ -41,12 +44,11 @@ local function drawButtons()
         end
     end
 
-    -- Draw button labels
+    -- Button labels
     for _, btn in ipairs(buttons) do
         local sectionWidth = monitorWidth / 4
         local x1 = (btn.section - 1) * sectionWidth + 1
         local x2 = btn.section * sectionWidth
-
         local labelLength = #btn.name
         local labelX = math.floor((x1 + x2) / 2) - math.floor(labelLength / 2)
         local labelY = math.floor(monitorHeight / 2) + 1
@@ -65,7 +67,6 @@ local function drawButtons()
     end
 end
 
--- Helper: Find button object by name
 local function getButtonByName(name)
     for _, btn in ipairs(buttons) do
         if btn.name == name then
@@ -75,10 +76,8 @@ local function getButtonByName(name)
     return nil
 end
 
--- Helper: Flash button when pressed (soft gray flash)
 local function flashButton(section)
     if not poweredOn then return end
-
     local sectionWidth = monitorWidth / 4
     local x1 = (section - 1) * sectionWidth + 1
     local x2 = section * sectionWidth
@@ -91,18 +90,15 @@ local function flashButton(section)
     end
 
     sleep(0.15)
-
     drawButtons()
 end
 
--- Helper: Pulse a redstone side
 local function pulse(side, duration)
     redstone.setOutput(side, true)
     sleep(duration)
     redstone.setOutput(side, false)
 end
 
--- Handle button presses
 local function handleButtonPress(name)
     local btn = getButtonByName(name)
     if not btn then return end
@@ -124,21 +120,20 @@ local function handleButtonPress(name)
             btn.active = true
             redstone.setOutput(btn.side, true)
             drawButtons()
-
             smokeTimer = os.startTimer(3)
             print("Smoke activated for 3 seconds")
         end
     end
 end
 
--- Initial draw
+-- Draw screen initially
 drawButtons()
 
--- Event loop
 print("Touchscreen ready.")
 
+-- Event loop
 while true do
-    local event, p1, p2, p3 = os.pullEvent()
+    local event, p1, p2, p3, p4, p5 = os.pullEvent()
 
     if event == "monitor_touch" then
         local side, x, y = p1, p2, p3
@@ -163,5 +158,28 @@ while true do
         smokeTimer = nil
         drawButtons()
         print("Smoke deactivated")
+
+    elseif event == "modem_message" then
+        local side, channel, replyChannel, message, distance = p1, p2, p3, p4, p5
+
+        if tostring(message) == "button_pressed" then
+            print("Shutdown signal received!")
+
+            -- Goodbye message
+            monitor.setBackgroundColor(colors.black)
+            monitor.clear()
+            monitor.setTextColor(colors.white)
+            monitor.setCursorPos(math.floor(monitorWidth / 2) - 3, math.floor(monitorHeight / 2))
+            monitor.write("Goodbye")
+            sleep(1)
+
+            monitor.setBackgroundColor(colors.black)
+            monitor.clear()
+            term.setBackgroundColor(colors.black)
+            term.clear()
+            term.setCursorPos(1,1)
+
+            os.shutdown()
+        end
     end
 end
