@@ -168,33 +168,36 @@ while true do
     elseif event == "modem_message" then
         local modemSide, modemChannel, replyChannel, message, distance = p1, p2, p3, p4, p5
 
-        -- Shutdown signal received, clean up and shutdown
-        if modemChannel == channel and tostring(message) == "stop_finalscreen" then
+        if modemChannel == channel and tostring(message) == "button_pressed" then
             print("Shutdown signal received!")
 
             -- Corrected Centered and Shifted Shutdown Message
+            
             monitor.setBackgroundColor(colors.black)
             monitor.clear()
             monitor.setTextColor(colors.white)
-
+            
             -- First line (System)
             monitor.setCursorPos(5, 2)
             monitor.write("==          System          ==")
-
+            
             -- Second line (Shutdown) → evenly spaced fixed
             monitor.setCursorPos(5, 4)
             monitor.write("==         Shutdown         ==")
-
+            
             sleep(1)
-
+            
             -- Full cleanup
             monitor.setBackgroundColor(colors.black)
             monitor.clear()
             term.setBackgroundColor(colors.black)
             term.clear()
             term.setCursorPos(1, 1)
+            
+            os.shutdown()
 
-            os.shutdown()  -- Shut down the system
         end
     end
 end
+
+
