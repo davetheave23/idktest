@@ -1,4 +1,4 @@
--- Full corrected code for dual speedometers with proper direction indicators
+-- Full corrected code for dual speedometers with smooth hand animation and proper direction indicators
 -- Setup - ADJUSTED for correct peripheral locations
 local monitorName = "top" -- change if needed
 local leftTrackName = "back" -- changed from "left" to "back"
@@ -43,7 +43,7 @@ local function drawCircle(cx, cy, radius, isConnected)
         local y = cy + math.sin(rad) * radius
         drawPoint(x, y, "*", isConnected and colors.lime or colors.red)
     end
-    
+
     -- Mark key points
     drawPoint(cx, cy - radius + 1, "0", colors.yellow) -- Top = 270°
     drawPoint(cx + radius - 1, cy, "F", colors.yellow) -- Right = 0°
@@ -54,85 +54,62 @@ end
 local function drawDial(cx, cy, radius, speed, isConnected)
     -- Draw dial circle and key points
     drawCircle(cx, cy, radius, isConnected)
-    
+
     -- Draw the dial hand (only if connected)
     if isConnected then
-        -- Calculate angle based on speed directly
-        local maxSpeed = 100 -- max speed for full deflection
+        -- Calculate angle based on speed
+        local maxSpeed = 100
         if speed > maxSpeed then speed = maxSpeed end
         if speed < -maxSpeed then speed = -maxSpeed end
-        
-        -- Angle calculation - COMPLETELY REVISED
-        -- For our setup: 
-        -- - Negative speed = Forward = dial points to F (right side, 0°)
-        -- - Positive speed = Reverse = dial points to R (left side, 180°)
-        -- - Zero speed = dial points to 0 (top, 270°)
-        
+
         local angle
         if speed == 0 then
-            angle = 270 -- pointing up at zero
+            angle = 270
         elseif speed < 0 then
-            -- Forward (negative speed): angle between 270° (up) and 0° (right)
-            -- Map -1 to -100 to angle 270° to 0°
-            -- More negative = more toward 0° (F)
-            angle = 270 - ((-speed)/maxSpeed * 270) -- Negative speed, more negative means more towards 0°
-            if angle < 0 then angle = angle + 360 end -- Keep angle in 0-360 range
+            angle = 270 - ((-speed) / maxSpeed * 270)
+            if angle < 0 then angle = angle + 360 end
         else
-            -- Reverse (positive speed): angle between 270° (up) and 180° (left)
-            -- Map 1 to 100 to angle 270° to 180°
-            -- More positive = more towards 180° (R)
-            angle = 270 + ((speed)/maxSpeed * 270) -- Positive speed, more positive means more towards 180°
-            if angle >= 360 then angle = angle - 360 end -- Keep angle within 0-360 range
+            angle = 270 + ((speed) / maxSpeed * 270)
+            if angle >= 360 then angle = angle - 360 end
         end
 
-        
-        -- Convert to radians
         local rad = math.rad(angle)
-        
-        -- Draw needle from center outward
         local needleLength = radius - 2
-        
-        -- Draw multiple points to make a thicker hand
+
         for i = 1, needleLength do
             local handX = cx + math.cos(rad) * i
             local handY = cy + math.sin(rad) * i
-            
+
             if i == needleLength then
-                -- Needle tip
                 drawPoint(handX, handY, "@", colors.red)
             elseif i > needleLength * 0.7 then
-                -- Needle shaft near tip
                 drawPoint(handX, handY, "|", colors.orange)
             else
-                -- Needle base
                 drawPoint(handX, handY, "|", colors.white)
             end
         end
-        
+
         -- Draw center hub
         drawPoint(cx, cy, "+", colors.cyan)
     else
-        -- If not connected, just draw an X in the center
         drawPoint(cx, cy, "X", colors.red)
     end
-    
-    -- Draw speed values at bottom (absolute value)
+
+    -- Draw speed values at bottom
     local speedText = isConnected and tostring(math.abs(math.floor(speed))) or "N/A"
     local direction = ""
     if isConnected then
-        -- Negative = Forward, Positive = Reverse
         if speed < 0 then  
-            direction = "F" -- Forward
+            direction = "F"
         elseif speed > 0 then
-            direction = "R" -- Reverse
+            direction = "R"
         end
     end
-    
-    -- Display speed and direction
+
     monitor.setCursorPos(cx - #speedText/2, cy + radius + 1)
     monitor.setTextColor(colors.white)
     monitor.write(speedText)
-    
+
     if direction ~= "" then
         monitor.setCursorPos(cx + #speedText/2 + 1, cy + radius + 1)
         monitor.setTextColor(speed < 0 and colors.lime or colors.red)
@@ -140,20 +117,18 @@ local function drawDial(cx, cy, radius, speed, isConnected)
     end
 end
 
--- Get raw speed data without changing sign
+-- Get raw speed data
 local function getRawSpeed(track, lineNum)
     if not track then return 0 end
-    
-    -- Try to get the line data
+
     local success, data = pcall(function() return track.getLine(lineNum) end)
-    
+
     if not success then
         return 0
     end
-    
-    -- Parse speed value based on data type
+
     local rawSpeed = 0
-    
+
     if type(data) == "table" then
         if data.text then
             local speedStr = tostring(data.text):match("-?%d+%.?%d*")
@@ -167,35 +142,51 @@ local function getRawSpeed(track, lineNum)
     elseif type(data) == "number" then
         rawSpeed = data
     end
-    
+
     return rawSpeed
 end
+
+-- Smooth movement helper function
+local function moveTowards(current, target, step)
+    if math.abs(target - current) <= step then
+        return target
+    elseif current < target then
+        return current + step
+    else
+        return current - step
+    end
+end
+
+-- Initialize displayed speeds
+local displayedLeftSpeed = 0
+local displayedRightSpeed = 0
 
 -- Main loop
 print("Starting speedometer. Press Ctrl+T to terminate.")
 while true do
     if not inputSide or redstone.getInput(inputSide) then
         clearMonitor()
-        
-        -- Read raw speeds without modifying the sign
+
+        -- Read raw speeds
         local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
         local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
 
-        -- Debug: Print speeds to console
-        print("Left speed: " .. leftSpeed .. ", Right speed: " .. rightSpeed)
-        
-        -- Draw left dial
-        drawDial(10, 8, 7, leftSpeed, leftTrack ~= nil)
-        
-        -- Draw right dial
-        drawDial(30, 8, 7, rightSpeed, rightTrack ~= nil)
-        
+        -- Smoothly update displayed speeds
+        displayedLeftSpeed = moveTowards(displayedLeftSpeed, leftSpeed, 2)
+        displayedRightSpeed = moveTowards(displayedRightSpeed, rightSpeed, 2)
+
+        -- Debug: Print actual and displayed speeds
+        print("Left speed: " .. leftSpeed .. " (Display: " .. displayedLeftSpeed .. ") | Right speed: " .. rightSpeed .. " (Display: " .. displayedRightSpeed .. ")")
+
+        -- Draw dials with smoothed speeds
+        drawDial(10, 8, 7, displayedLeftSpeed, leftTrack ~= nil)
+        drawDial(30, 8, 7, displayedRightSpeed, rightTrack ~= nil)
+
         -- Connection status
         monitor.setCursorPos(1, 1)
         monitor.setTextColor(colors.yellow)
         monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
     else
-        -- If lever off, turn off screen
         clearMonitor()
     end
     sleep(0.1)
