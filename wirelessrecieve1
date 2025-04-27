@@ -1,22 +1,28 @@
 -- Receiver side
-local modem = peripheral.wrap("bottom") -- change if needed
+local modem = peripheral.wrap("front") -- modem is on front
 local channel = 1
+
 modem.open(channel)
 
-local isOn = false
+local touchscreenRunning = false
+local touchscreenProcessID = nil
 
 while true do
-    local event, side, receivedChannel, replyChannel, message, distance = os.pullEvent("modem_message")
-    if message == "button_pressed" then
-        if not isOn then
-            print("Turning ON")
-            shell.run("finalscreen.lua")
-            isOn = true
+    local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
+    
+    if senderChannel == channel and message == "button_pressed" then
+        if not touchscreenRunning then
+            -- Start touchscreen.lua
+            touchscreenProcessID = shell.openTab("touchscreen.lua")
+            touchscreenRunning = true
+            print("Touchscreen started")
         else
-            print("Turning OFF")
-            -- Optional: run a different shutdown script or just reset
-            os.reboot()
-            isOn = false
+            -- Stop touchscreen.lua
+            if touchscreenProcessID then
+                shell.terminate(touchscreenProcessID)
+            end
+            touchscreenRunning = false
+            print("Touchscreen stopped")
         end
     end
 end
