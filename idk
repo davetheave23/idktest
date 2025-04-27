@@ -1,32 +1,80 @@
 local gpu = peripheral.wrap("top")
 
--- Initialize screen size (get the screen size using getSize)
+-- Get screen size
 local width, height = gpu.getSize()
 print("Screen size: " .. width .. "x" .. height)
 
--- Set the background color and text color
+-- Set background color and text color
 gpu.setBackgroundColor(colors.black)
 gpu.setTextColor(colors.white)
 
 -- Clear the screen
 gpu.clear()
 
--- Set the text scale
-gpu.setTextScale(1)
+-- Function to simulate rectangle drawing (using 'write' for simplicity)
+local function drawRectangle(x, y, w, h, color)
+    gpu.setBackgroundColor(color)
+    for i = 0, h - 1 do
+        gpu.setCursorPos(x, y + i)
+        for j = 0, w - 1 do
+            gpu.write(" ")
+        end
+    end
+end
 
--- Write a simple message
-gpu.setCursorPos(1, 1)
-gpu.write("Hello World!")
+-- Screen Initialization
+local function screenInitialization()
+    -- Draw the colored rectangles like in your original code
+    drawRectangle(1, 32, 384, 4, colors.white)
+    drawRectangle(184, 34, 16, 2, colors.blue)
+    drawRectangle(188, 32, 8, 2, colors.blue)
 
--- Example: Draw a rectangle with a different color
-gpu.setTextColor(colors.blue)
-gpu.setCursorPos(1, 2)
-gpu.write("This is a blue text line!")
+    drawRectangle(40, 256, 252, 4, colors.white)
+    drawRectangle(288, 32, 4, 288, colors.white)
+    drawRectangle(1, 316, 384, 4, colors.white)
 
--- You can also clear a line or scroll the screen
-gpu.clearLine()  -- Clears the current line
+    drawRectangle(44, 256, 44, 4, colors.white)
+    drawRectangle(1, 284, 42, 4, colors.white)
+    drawRectangle(40, 32, 4, 256, colors.white)
 
--- Add any other desired functionality (like drawing shapes, etc.)
+    drawRectangle(41, 160, 3, 15, colors.blue)
+    drawRectangle(40, 165, 1, 5, colors.blue)
 
--- Use sleep to let the program run for a bit
-sleep(2)
+    drawRectangle(40, 288, 4, 32, colors.white)
+    drawRectangle(118, 256, 4, 64, colors.white)
+    drawRectangle(210, 256, 4, 64, colors.white)
+
+    gpu.setTextColor(colors.white)
+    gpu.setCursorPos(10, 10)
+    gpu.write("Initializing...")
+
+    gpu.sync()  -- Refresh the screen
+end
+
+-- Run the initialization with a small delay for animation effect
+screenInitialization()
+sleep(0.1)
+screenInitialization()
+
+-- Start listening to modem messages (as in the original code)
+modem.open(17068)
+
+-- Function to write received data to file (as in the original code)
+local function writeInfo(text, txt)
+    local fileName = tostring(txt)
+    local file = fs.open(fileName, "w")
+    file.write(text)
+    file.close()
+end
+
+local bullet = "bulletLeft.txt"
+
+while true do
+    local event, side, channel, replyChannel, message, distance
+    repeat
+        event, side, channel, replyChannel, message, distance = os.pullEvent("modem_message")
+    until channel == 17068
+    local receiveMessage = message
+    writeInfo(receiveMessage, bullet)
+    screenInitialization()
+end
