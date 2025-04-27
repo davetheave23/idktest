@@ -1,8 +1,8 @@
 -- Wrap the peripheral to the monitor (change side if needed)
 local monitor = peripheral.wrap("top")  -- Adjust to the correct side for your setup
 
--- Set text scale for larger text
-monitor.setTextScale(1)  -- Using text scale 1 for larger text
+-- Set text scale for smaller text to fit the screen
+monitor.setTextScale(0.5)  -- Small text scale to fit a 2x2 monitor
 
 -- Clear the monitor
 monitor.clear()
@@ -13,14 +13,14 @@ function displayProgramStart()
     local width, height = monitor.getSize()
 
     -- Set cursor to center the text
-    monitor.setCursorPos(math.floor((width - 14) / 2), math.floor((height - 2) / 2))
+    monitor.setCursorPos(math.floor((width - 9) / 2), math.floor((height - 2) / 2))
 
     -- Set text color and write the message
     monitor.setTextColor(colors.white)
-    monitor.write("==      Program    ==")
+    monitor.write("== Program ==")
 
-    monitor.setCursorPos(math.floor((width - 14) / 2), math.floor((height - 1) / 2) + 1)
-    monitor.write("==         Start        ==")
+    monitor.setCursorPos(math.floor((width - 9) / 2), math.floor((height - 1) / 2) + 1)
+    monitor.write("== Start ==")
 
     sleep(2)  -- Display for 2 seconds before proceeding
 end
