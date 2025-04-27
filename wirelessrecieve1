@@ -1,23 +1,30 @@
 -- Receiver side
-rednet.open("bottom") -- open the modem on the bottom side
+local modem = peripheral.wrap("bottom") -- Wireless modem on bottom
 local channel = 1
 
 local finalscreenRunning = false
+local finalscreenProcess = nil
+
+print("Waiting for wireless button press...")
 
 while true do
     local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
-    
+
     if senderChannel == channel and message == "button_pressed" then
         if not finalscreenRunning then
             -- Start finalscreen
-            shell.openTab("finalscreen.lua", "start")
+            finalscreenProcess = shell.openTab("finalscreen.lua") -- openTab starts in a new tab
             finalscreenRunning = true
             print("Finalscreen started")
         else
-            -- Tell finalscreen to stop
-            rednet.broadcast("stop_finalscreen", channel)
+            -- Stop finalscreen
+            if finalscreenProcess then
+                term.redirect(nil) -- Just in case
+                shell.terminate(finalscreenProcess)
+                finalscreenProcess = nil
+            end
             finalscreenRunning = false
-            print("Finalscreen stopping")
+            print("Finalscreen stopped")
         end
     end
 end
