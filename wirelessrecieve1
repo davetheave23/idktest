@@ -1,0 +1,22 @@
+-- Receiver side
+local modem = peripheral.wrap("bottom") -- change if needed
+local channel = 1
+modem.open(channel)
+
+local isOn = false
+
+while true do
+    local event, side, receivedChannel, replyChannel, message, distance = os.pullEvent("modem_message")
+    if message == "button_pressed" then
+        if not isOn then
+            print("Turning ON")
+            shell.run("finalscreen.lua")
+            isOn = true
+        else
+            print("Turning OFF")
+            -- Optional: run a different shutdown script or just reset
+            os.reboot()
+            isOn = false
+        end
+    end
+end
