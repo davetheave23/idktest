@@ -1,110 +1,53 @@
-local gpu = peripheral.wrap("bottom")
-local modem = peripheral.wrap("modem_2")
+-- First, make sure to connect the monitor to the computer
+-- This code assumes the monitor is connected to the side of the computer
 
--- Set up the monitor (based on your old code)
-gpu.setSize(64, 64, 6, 5, 30)
-gpu.refreshSize()
-gpu.sync()
+local monitor = peripheral.wrap("top")  -- Change the side if needed (e.g., "left", "right", "back", etc.)
 
--- Your existing logo-drawing function
-local function screenInitialization()
-    gpu.filledRectangle(1,32,384,4,0xffffff)
-    gpu.filledRectangle(184,34,16,2,0x0000ff)
-    gpu.filledRectangle(188,32,8,2,0x0000ff)
+-- Set the monitor size
+monitor.setTextScale(0.5) -- Optional: Adjust text size on monitor
+monitor.clear()  -- Clear the screen
 
-    gpu.filledRectangle(40,256,252,4,0xffffff)
-    gpu.filledRectangle(288,32,4,288,0xffffff)
-    gpu.filledRectangle(1,316,384,4,0xffffff)
-
-    gpu.filledRectangle(44,256,44,4,0xffffff)
-    gpu.filledRectangle(1,284,42,4,0xffffff)
-    gpu.filledRectangle(40,32,4,256,0xffffff)
-
-    gpu.filledRectangle(41,160,3,15,0x0000ff)
-    gpu.filledRectangle(40,165,1,5,0x0000ff)
-
-    gpu.filledRectangle(40,288,4,32,0xffffff)
-    gpu.filledRectangle(118,256,4,64,0xffffff)
-    gpu.filledRectangle(210,256,4,64,0xffffff)
-
-    gpu.sync()
-end
-
--- Function to print system diagnostics
-local function runDiagnostics()
-    local diagnostics = {
-        {"Initializing Kernel", "OK"},
-        {"Loading Drivers", "OK"},
-        {"Checking Memory", "FAIL"},
-        {"Connecting Network", "OK"},
-        {"Starting Services", "OK"},
-        {"Verifying GPU", "OK"},
-        {"Finalizing Setup", "OK"}
-    }
-
-    term.clear()
-    term.setCursorPos(1,1)
-    print("System Check...\n")
-    sleep(1)
-
-    for _, diag in ipairs(diagnostics) do
-        local name, status = diag[1], diag[2]
-        io.write(name .. " ")
-        sleep(0.5)
-        if status == "OK" then
-            print("[ OK ]")
-        else
-            print("[FAIL]")
-        end
-        sleep(0.5)
+-- Function to draw a square
+function drawSquare()
+    monitor.setCursorPos(5, 5)
+    monitor.write("Square:")
+    
+    -- Drawing a square with simple characters
+    for x = 5, 15 do
+        monitor.setCursorPos(x, 6)
+        monitor.write("X")
+        monitor.setCursorPos(x, 14)
+        monitor.write("X")
     end
-
-    sleep(1)
-end
-
--- Function to fade out the monitor
-local function fadeOut()
-    for i = 1, 10 do
-        gpu.setBackgroundColour(colours.black)
-        gpu.clear()
-        sleep(0.1)
+    
+    for y = 6, 14 do
+        monitor.setCursorPos(5, y)
+        monitor.write("X")
+        monitor.setCursorPos(15, y)
+        monitor.write("X")
     end
-    gpu.sync()
 end
 
--- MAIN SEQUENCE
+-- Function to draw a circle (simple approximation)
+function drawCircle()
+    monitor.setCursorPos(5, 16)
+    monitor.write("Circle:")
 
-runDiagnostics()          -- Step 1: Run fake diagnostics
-gpu.setBackgroundColour(colours.black)
-gpu.clear()
-gpu.sync()
+    -- This is a simple approximation using asterisks for a circle shape
+    local centerX = 10
+    local centerY = 20
+    local radius = 6
 
-sleep(0.5)
-
-screenInitialization()    -- Step 2: Draw your logo
-sleep(3)                  -- Show logo for 3 seconds
-
-fadeOut()                 -- Step 3: Fade away
-
--- Start your real program here (modem open etc.)
-modem.open(17068)
-
-local function writeInfo(text,txt)
-    local fileName = tostring(txt)
-    local file = fs.open(fileName,"w")
-    file.write(text)
-    file.close()
+    for angle = 0, 360, 5 do
+        local rad = math.rad(angle)
+        local x = math.floor(centerX + radius * math.cos(rad))
+        local y = math.floor(centerY + radius * math.sin(rad))
+        monitor.setCursorPos(x, y)
+        monitor.write("*")
+    end
 end
 
-local bullet = "bulletLeft.txt"
-
-while true do
-    local event, side, channel, replyChannel, message, distance
-    repeat
-        event, side, channel, replyChannel, message, distance = os.pullEvent("modem_message")
-    until channel == 17068
-
-    local receiveMessage = message
-    writeInfo(receiveMessage, bullet)
-    screenInitialization() -- redraw logo or update screen after message
-end
+-- Call the drawing functions
+drawSquare()
+sleep(2) -- Wait for 2 seconds before drawing the circle
+drawCircle()
