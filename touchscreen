@@ -1,8 +1,10 @@
--- Train Touchscreen Panel - Instant Start Version WITH Wireless Shutdown Support
+-- Train Touchscreen Panel - Instant Start + Wireless Shutdown Corrected Version
 
 local monitorName = "front" -- Adjust if needed
-local modemSide = "bottom"  -- Modem side
+local modemSide = "bottom"  -- Wireless modem side
+local channel = 1           -- Channel to listen for button presses
 
+-- Wrap peripherals
 local monitor = peripheral.wrap(monitorName)
 local modem = peripheral.wrap(modemSide)
 
@@ -11,13 +13,14 @@ if not monitor or not modem then
     return
 end
 
-rednet.open(modemSide)
+modem.open(channel) -- Important: OPEN modem on correct channel!
 
 monitor.setTextScale(1) -- Big text
 local monitorWidth, monitorHeight = monitor.getSize()
 
 print("Monitor size detected: "..monitorWidth.."x"..monitorHeight)
 
+-- Define button sections and states
 local buttons = {
     {name = "Hatch", section = 1, side = "back", toggle = true, active = false},
     {name = "Lights", section = 2, side = "left", toggle = true, active = false},
@@ -27,15 +30,16 @@ local buttons = {
 
 local locked = false -- Lock state
 local smokeTimer = nil -- Timer for smoke activation
-local poweredOn = true -- Instant start
+local poweredOn = true -- We start active!
 
--- Helper functions
+-- Draw the screen
 local function drawButtons()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
 
-    -- Dividers
     monitor.setTextColor(colors.white)
+
+    -- Draw vertical dividers
     for i = 1, 3 do
         local dividerX = math.floor((i * monitorWidth) / 4) + 1
         for y = 1, monitorHeight do
@@ -44,7 +48,7 @@ local function drawButtons()
         end
     end
 
-    -- Button labels
+    -- Draw each button label
     for _, btn in ipairs(buttons) do
         local sectionWidth = monitorWidth / 4
         local x1 = (btn.section - 1) * sectionWidth + 1
@@ -126,12 +130,12 @@ local function handleButtonPress(name)
     end
 end
 
--- Draw screen initially
+-- Initial draw
 drawButtons()
 
 print("Touchscreen ready.")
 
--- Event loop
+-- Main event loop
 while true do
     local event, p1, p2, p3, p4, p5 = os.pullEvent()
 
@@ -160,9 +164,9 @@ while true do
         print("Smoke deactivated")
 
     elseif event == "modem_message" then
-        local side, channel, replyChannel, message, distance = p1, p2, p3, p4, p5
+        local modemSide, modemChannel, replyChannel, message, distance = p1, p2, p3, p4, p5
 
-        if tostring(message) == "button_pressed" then
+        if modemChannel == channel and tostring(message) == "button_pressed" then
             print("Shutdown signal received!")
 
             -- Goodbye message
@@ -177,7 +181,7 @@ while true do
             monitor.clear()
             term.setBackgroundColor(colors.black)
             term.clear()
-            term.setCursorPos(1,1)
+            term.setCursorPos(1, 1)
 
             os.shutdown()
         end
