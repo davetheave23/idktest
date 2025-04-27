@@ -3,7 +3,6 @@ local modem = peripheral.wrap("bottom") -- Wireless modem on bottom
 local channel = 1
 
 local finalscreenRunning = false
-local finalscreenProcess = nil
 
 print("Waiting for wireless button press...")
 
@@ -12,19 +11,16 @@ while true do
 
     if senderChannel == channel and message == "button_pressed" then
         if not finalscreenRunning then
-            -- Start finalscreen
-            finalscreenProcess = shell.openTab("finalscreen.lua") -- openTab starts in a new tab
+            -- Start finalscreen directly
+            print("Starting Finalscreen...")
+            shell.run("finalscreen.lua")
             finalscreenRunning = true
             print("Finalscreen started")
         else
-            -- Stop finalscreen
-            if finalscreenProcess then
-                term.redirect(nil) -- Just in case
-                shell.terminate(finalscreenProcess)
-                finalscreenProcess = nil
-            end
-            finalscreenRunning = false
-            print("Finalscreen stopped")
+            -- Shutdown computer to stop finalscreen
+            print("Stopping Finalscreen...")
+            redstone.setOutput("bottom", false)
+            os.shutdown()
         end
     end
 end
