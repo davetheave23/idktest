@@ -1,20 +1,10 @@
 local gpu = peripheral.wrap("top")
 
--- Set resolution (if available)
-gpu.setResolution(64, 64)
+local success, result = pcall(gpu.setResolution, 64, 64)
+print("setResolution success:", success)
 
--- Clear the screen
-gpu.clear()
+local success, result = pcall(gpu.clear)
+print("clear success:", success)
 
--- Set some text
-gpu.set(1, 1, "Hello, world!")
-
--- Set background color (optional)
-gpu.setBackgroundColor(colors.black)
-gpu.clear()
-
--- Set text color
-gpu.setTextColor(colors.white)
-
--- Draw text on the screen
-gpu.set(10, 10, "Test Text")
+local success, result = pcall(gpu.set, 1, 1, "Test")
+print("set success:", success)
