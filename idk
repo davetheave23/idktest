@@ -1,68 +1,97 @@
-local gpu = peripheral.wrap("top")
+local gpu = peripheral.wrap("bottom")
+local modem = peripheral.wrap("modem_2")
 
--- Get screen size
-local width, height = gpu.getSize()
-print("Screen size: " .. width .. "x" .. height)
+-- Set up the monitor (based on your old code)
+gpu.setSize(64, 64, 6, 5, 30)
+gpu.refreshSize()
+gpu.sync()
 
--- Set background color and text color
-gpu.setBackgroundColor(colors.black)
-gpu.setTextColor(colors.white)
-
--- Clear the screen
-gpu.clear()
-
--- Function to simulate rectangle drawing (using 'write' for simplicity)
-local function drawRectangle(x, y, w, h, color)
-    gpu.setBackgroundColor(color)
-    for i = 0, h - 1 do
-        gpu.setCursorPos(x, y + i)
-        for j = 0, w - 1 do
-            gpu.write(" ")
-        end
-    end
-end
-
--- Screen Initialization
+-- Your existing logo-drawing function
 local function screenInitialization()
-    -- Draw the colored rectangles like in your original code
-    drawRectangle(1, 32, 384, 4, colors.white)
-    drawRectangle(184, 34, 16, 2, colors.blue)
-    drawRectangle(188, 32, 8, 2, colors.blue)
+    gpu.filledRectangle(1,32,384,4,0xffffff)
+    gpu.filledRectangle(184,34,16,2,0x0000ff)
+    gpu.filledRectangle(188,32,8,2,0x0000ff)
 
-    drawRectangle(40, 256, 252, 4, colors.white)
-    drawRectangle(288, 32, 4, 288, colors.white)
-    drawRectangle(1, 316, 384, 4, colors.white)
+    gpu.filledRectangle(40,256,252,4,0xffffff)
+    gpu.filledRectangle(288,32,4,288,0xffffff)
+    gpu.filledRectangle(1,316,384,4,0xffffff)
 
-    drawRectangle(44, 256, 44, 4, colors.white)
-    drawRectangle(1, 284, 42, 4, colors.white)
-    drawRectangle(40, 32, 4, 256, colors.white)
+    gpu.filledRectangle(44,256,44,4,0xffffff)
+    gpu.filledRectangle(1,284,42,4,0xffffff)
+    gpu.filledRectangle(40,32,4,256,0xffffff)
 
-    drawRectangle(41, 160, 3, 15, colors.blue)
-    drawRectangle(40, 165, 1, 5, colors.blue)
+    gpu.filledRectangle(41,160,3,15,0x0000ff)
+    gpu.filledRectangle(40,165,1,5,0x0000ff)
 
-    drawRectangle(40, 288, 4, 32, colors.white)
-    drawRectangle(118, 256, 4, 64, colors.white)
-    drawRectangle(210, 256, 4, 64, colors.white)
+    gpu.filledRectangle(40,288,4,32,0xffffff)
+    gpu.filledRectangle(118,256,4,64,0xffffff)
+    gpu.filledRectangle(210,256,4,64,0xffffff)
 
-    gpu.setTextColor(colors.white)
-    gpu.setCursorPos(10, 10)
-    gpu.write("Initializing...")
-
-    gpu.sync()  -- Refresh the screen
+    gpu.sync()
 end
 
--- Run the initialization with a small delay for animation effect
-screenInitialization()
-sleep(0.1)
-screenInitialization()
+-- Function to print system diagnostics
+local function runDiagnostics()
+    local diagnostics = {
+        {"Initializing Kernel", "OK"},
+        {"Loading Drivers", "OK"},
+        {"Checking Memory", "FAIL"},
+        {"Connecting Network", "OK"},
+        {"Starting Services", "OK"},
+        {"Verifying GPU", "OK"},
+        {"Finalizing Setup", "OK"}
+    }
 
--- Start listening to modem messages (as in the original code)
+    term.clear()
+    term.setCursorPos(1,1)
+    print("System Check...\n")
+    sleep(1)
+
+    for _, diag in ipairs(diagnostics) do
+        local name, status = diag[1], diag[2]
+        io.write(name .. " ")
+        sleep(0.5)
+        if status == "OK" then
+            print("[ OK ]")
+        else
+            print("[FAIL]")
+        end
+        sleep(0.5)
+    end
+
+    sleep(1)
+end
+
+-- Function to fade out the monitor
+local function fadeOut()
+    for i = 1, 10 do
+        gpu.setBackgroundColour(colours.black)
+        gpu.clear()
+        sleep(0.1)
+    end
+    gpu.sync()
+end
+
+-- MAIN SEQUENCE
+
+runDiagnostics()          -- Step 1: Run fake diagnostics
+gpu.setBackgroundColour(colours.black)
+gpu.clear()
+gpu.sync()
+
+sleep(0.5)
+
+screenInitialization()    -- Step 2: Draw your logo
+sleep(3)                  -- Show logo for 3 seconds
+
+fadeOut()                 -- Step 3: Fade away
+
+-- Start your real program here (modem open etc.)
 modem.open(17068)
 
--- Function to write received data to file (as in the original code)
-local function writeInfo(text, txt)
+local function writeInfo(text,txt)
     local fileName = tostring(txt)
-    local file = fs.open(fileName, "w")
+    local file = fs.open(fileName,"w")
     file.write(text)
     file.close()
 end
@@ -74,7 +103,8 @@ while true do
     repeat
         event, side, channel, replyChannel, message, distance = os.pullEvent("modem_message")
     until channel == 17068
+
     local receiveMessage = message
     writeInfo(receiveMessage, bullet)
-    screenInitialization()
+    screenInitialization() -- redraw logo or update screen after message
 end
