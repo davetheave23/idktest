@@ -1,6 +1,6 @@
--- Wireless Receiver for controlling animatedspeedometer.lua
+-- Speedometer wireless receiver with real parallel control
 
-local modem = peripheral.wrap("right") -- Right side of the computer
+local modem = peripheral.wrap("right") -- or correct side
 local channel = 1
 
 if not modem then
@@ -12,20 +12,40 @@ modem.open(channel)
 
 local speedometerRunning = false
 
-print("Speedometer wireless receiver ready.")
+local function runReceiver()
+    print("Receiver started. Waiting for wireless signals...")
 
-while true do
-    local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
+    while true do
+        local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
 
-    if senderChannel == channel and message == "button_pressed" then
-        if not speedometerRunning then
-            print("Starting Speedometer.")
-            shell.openTab("animatedspeedometer.lua")
-            speedometerRunning = true
-        else
-            print("Stopping Speedometer.")
-            os.queueEvent("shutdown_speedometer")
-            speedometerRunning = false
+        if senderChannel == channel and message == "button_pressed" then
+            if not speedometerRunning then
+                print("Starting Speedometer...")
+                os.queueEvent("start_speedometer")
+            else
+                print("Stopping Speedometer...")
+                os.queueEvent("shutdown_speedometer")
+            end
         end
     end
 end
+
+local function runSpeedometerManager()
+    while true do
+        local event = os.pullEvent()
+
+        if event == "start_speedometer" and not speedometerRunning then
+            speedometerRunning = true
+            shell.run("animatedspeedometer.lua")
+            -- When animatedspeedometer.lua exits:
+            speedometerRunning = false
+            print("Speedometer exited.")
+        elseif event == "shutdown_speedometer" and speedometerRunning then
+            os.queueEvent("shutdown_speedometer") -- send shutdown event inside speedometer
+            -- speedometer.lua will break and shell.run will finish
+        end
+    end
+end
+
+-- Now run both in parallel!
+parallel.waitForAny(runReceiver, runSpeedometerManager)
