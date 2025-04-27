@@ -1,26 +1,30 @@
--- Animated Dual Speedometer - Final Stable Version
+-- Animated Dual Speedometer - Final Clean Version
 
-local monitorName = "top" -- Change if needed
+-- Settings
+local monitorName = "top" -- <<< CHANGE if needed
 local leftTrackName = "back"
 local rightTrackName = "bottom"
 
-print("Wrapping peripherals...")
+-- Save original terminal
+local originalTerm = term.current()
+
+-- Wrap peripherals
 local monitor = peripheral.wrap(monitorName)
 local leftTrack = peripheral.wrap(leftTrackName)
 local rightTrack = peripheral.wrap(rightTrackName)
 
 if not monitor then
+    term.redirect(originalTerm)
     print("ERROR: Monitor not found on side: " .. monitorName)
     return
 end
 
-print("Monitor found. Redirecting output...")
+-- Redirect output to monitor
 term.redirect(monitor)
-
 monitor.setTextScale(0.5)
 local monitorWidth, monitorHeight = monitor.getSize()
-print("Monitor size: " .. monitorWidth .. "x" .. monitorHeight)
 
+-- Helper Functions
 local function clearMonitor()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
@@ -68,6 +72,7 @@ local function drawDial(cx, cy, radius, angle, speed, isConnected)
         drawPoint(cx, cy, "X", colors.red)
     end
 
+    -- Draw speed number
     local speedText = isConnected and tostring(math.abs(math.floor(speed))) or "N/A"
     local direction = ""
     if isConnected then
@@ -90,17 +95,10 @@ local function drawDial(cx, cy, radius, angle, speed, isConnected)
 end
 
 local function getRawSpeed(track, lineNum)
-    if not track then
-        print("WARNING: No track for line " .. lineNum)
-        return 0
-    end
+    if not track then return 0 end
 
     local success, data = pcall(function() return track.getLine(lineNum) end)
-
-    if not success then
-        print("WARNING: Failed to read line " .. lineNum)
-        return 0
-    end
+    if not success then return 0 end
 
     local rawSpeed = 0
 
@@ -152,29 +150,30 @@ local function moveAngleTowards(current, target, step)
     end
 end
 
--- Initialize displayed values
+-- Initial values
 local displayedLeftAngle = 270
 local displayedRightAngle = 270
 local displayedLeftSpeed = 0
 local displayedRightSpeed = 0
 
-print("Speedometer running. Waiting for shutdown...")
+-- Clear monitor at start
+clearMonitor()
 
 -- Main loop
 while true do
-    local event, p1, p2, p3, p4, p5 = os.pullEvent()
+    local event = os.pullEvent()
 
     if event == "shutdown_speedometer" then
-        print("Shutdown event received. Cleaning up...")
+        -- Clean shutdown
         clearMonitor()
-        term.redirect(term.native()) -- Reset terminal output
+        term.redirect(originalTerm)
         term.setBackgroundColor(colors.black)
         term.clear()
         term.setCursorPos(1, 1)
         print("Speedometer shutdown complete.")
         break
     else
-        -- Update the speedometers
+        -- Update dials
         clearMonitor()
 
         local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
