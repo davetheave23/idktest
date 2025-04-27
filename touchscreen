@@ -175,25 +175,26 @@ while true do
             monitor.setBackgroundColor(colors.black)
             monitor.clear()
             monitor.setTextColor(colors.white)
-
+            
             -- First line (System)
-            monitor.setCursorPos(7, 2)
+            monitor.setCursorPos(6, 2)
             monitor.write("==          System          ==")
-
+            
             -- Second line (Shutdown)
-            monitor.setCursorPos(8, 4)
+            monitor.setCursorPos(7, 4)
             monitor.write("==        Shutdown        ==")
-
+            
             sleep(1)
-
-            -- Clear monitor + shutdown
+            
+            -- Full cleanup
             monitor.setBackgroundColor(colors.black)
             monitor.clear()
             term.setBackgroundColor(colors.black)
             term.clear()
             term.setCursorPos(1, 1)
-
+            
             os.shutdown()
+            
         end
     end
 end
