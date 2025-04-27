@@ -1,5 +1,6 @@
--- Receiver side
-local modem = peripheral.wrap("bottom") -- Wireless modem on bottom
+-- Wireless Receiver that can start/stop finalscreen.lua without stopping itself
+
+local modem = peripheral.wrap("bottom") -- Wireless modem under computer
 local channel = 1
 
 if not modem then
@@ -9,15 +10,25 @@ end
 
 modem.open(channel)
 
-print("Waiting for button press...")
+local finalscreenTabID = nil
+
+print("Wireless receiver ready.")
 
 while true do
     local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
 
     if senderChannel == channel and message == "button_pressed" then
-        print("Button pressed. Starting Finalscreen.")
+        if finalscreenTabID == nil then
+            print("Starting Finalscreen.")
+            finalscreenTabID = shell.openTab("finalscreen.lua")
+        else
+            print("Stopping Finalscreen.")
 
-        -- OPEN FINALSCREEN IN A NEW TAB!
-        shell.openTab("finalscreen.lua")
+            -- Send a shutdown signal to finalscreen
+            rednet.broadcast("button_pressed", channel)
+
+            -- Clear finalscreen tab info
+            finalscreenTabID = nil
+        end
     end
 end
