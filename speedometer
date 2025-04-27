@@ -156,35 +156,52 @@ local displayedRightAngle = 270
 local displayedLeftSpeed = 0
 local displayedRightSpeed = 0
 
--- Main loop
 print("Starting speedometer. Press Ctrl+T to terminate.")
+
+-- Main event loop
 while true do
-    if not inputSide or redstone.getInput(inputSide) then
+    local event = os.pullEvent()
+
+    if event == "shutdown_speedometer" then
+        print("Shutdown signal received for speedometer!")
         clearMonitor()
-
-        local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
-        local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
-
-        local targetLeftAngle = speedToAngle(leftSpeed)
-        local targetRightAngle = speedToAngle(rightSpeed)
-
-        -- Smooth angle movement
-        displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5) -- 5 degrees per frame
-        displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
-
-        -- Smooth speed display (optional for text, could skip if you want instant numbers)
-        displayedLeftSpeed = leftSpeed
-        displayedRightSpeed = rightSpeed
-
-        -- Draw dials
-        drawDial(10, 8, 7, displayedLeftAngle, displayedLeftSpeed, leftTrack ~= nil)
-        drawDial(30, 8, 7, displayedRightAngle, displayedRightSpeed, rightTrack ~= nil)
-
-        monitor.setCursorPos(1, 1)
-        monitor.setTextColor(colors.yellow)
-        monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
+        monitor.setBackgroundColor(colors.black)
+        monitor.clear()
+        term.setBackgroundColor(colors.black)
+        term.clear()
+        term.setCursorPos(1, 1)
+        break
+    elseif event == "timer" or event == "redstone" then
+        -- Ignore timer/redstone events directly
     else
-        clearMonitor()
+        -- Main drawing update (still every frame)
+        if not inputSide or redstone.getInput(inputSide) then
+            clearMonitor()
+
+            local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
+            local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
+
+            local targetLeftAngle = speedToAngle(leftSpeed)
+            local targetRightAngle = speedToAngle(rightSpeed)
+
+            -- Smooth angle movement
+            displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5) -- 5 degrees per frame
+            displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
+
+            displayedLeftSpeed = leftSpeed
+            displayedRightSpeed = rightSpeed
+
+            -- Draw dials
+            drawDial(10, 8, 7, displayedLeftAngle, displayedLeftSpeed, leftTrack ~= nil)
+            drawDial(30, 8, 7, displayedRightAngle, displayedRightSpeed, rightTrack ~= nil)
+
+            monitor.setCursorPos(1, 1)
+            monitor.setTextColor(colors.yellow)
+            monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
+        else
+            clearMonitor()
+        end
     end
+
     sleep(0.1)
 end
