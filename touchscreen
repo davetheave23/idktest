@@ -1,4 +1,4 @@
--- Train Touchscreen Panel - Instant Start + Wireless Shutdown + Correct Centered Message final
+-- Train Touchscreen Panel - Instant Start + Wireless Shutdown + Correct Centered Message fixed
 
 local monitorName = "front" -- Monitor side
 local modemSide = "bottom"  -- Wireless modem side
