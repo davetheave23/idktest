@@ -152,9 +152,15 @@ rednet.open(modemSide)
 while true do
     local event, p1, p2, p3, p4 = os.pullEvent()
 
+    -- Debugging: Check for event types and values
+    print("Received event: " .. event)
+    
     -- Check if we need to stop the finalscreen.lua program
     if event == "modem_message" then
         local side, channel, replyChannel, message, distance = p1, p2, p3, p4, p5
+
+        -- Debugging: Check message received
+        print("Received modem message: " .. tostring(message))
 
         if tostring(message) == "stop_finalscreen" then
             print("Stopping finalscreen...")
