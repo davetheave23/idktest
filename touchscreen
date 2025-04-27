@@ -1,6 +1,6 @@
--- Animated Dual Speedometer - Cleaned Final Version
+-- Animated Dual Speedometer - Final Stable Version
 
-local monitorName = "top" -- Change this to your monitor side if needed
+local monitorName = "top" -- Change if needed
 local leftTrackName = "back"
 local rightTrackName = "bottom"
 
@@ -78,12 +78,12 @@ local function drawDial(cx, cy, radius, angle, speed, isConnected)
         end
     end
 
-    monitor.setCursorPos(cx - #speedText / 2, cy + radius + 1)
+    monitor.setCursorPos(math.floor(cx - #speedText / 2), cy + radius + 1)
     monitor.setTextColor(colors.white)
     monitor.write(speedText)
 
     if direction ~= "" then
-        monitor.setCursorPos(cx + #speedText / 2 + 1, cy + radius + 1)
+        monitor.setCursorPos(math.floor(cx + #speedText / 2 + 1), cy + radius + 1)
         monitor.setTextColor(speed < 0 and colors.lime or colors.red)
         monitor.write(direction)
     end
@@ -162,7 +162,7 @@ print("Speedometer running. Waiting for shutdown...")
 
 -- Main loop
 while true do
-    local event = os.pullEvent()
+    local event, p1, p2, p3, p4, p5 = os.pullEvent()
 
     if event == "shutdown_speedometer" then
         print("Shutdown event received. Cleaning up...")
@@ -174,7 +174,7 @@ while true do
         print("Speedometer shutdown complete.")
         break
     else
-        -- Update the speedometers every cycle
+        -- Update the speedometers
         clearMonitor()
 
         local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
