@@ -75,14 +75,14 @@ local function drawDial(cx, cy, radius, speed, isConnected)
             -- Forward (negative speed): angle between 270° (up) and 0° (right)
             -- Map -1 to -100 to angle 270° to 0°
             -- More negative = more toward 0° (F)
-            angle = 270 - ((-speed)/maxSpeed * 270)
+            angle = 270 - ((-speed)/maxSpeed * 270) -- Negative speed, more negative means more towards 0°
             if angle < 0 then angle = angle + 360 end -- Keep angle in 0-360 range
         else
             -- Reverse (positive speed): angle between 270° (up) and 180° (left)
             -- Map 1 to 100 to angle 270° to 180°
-            -- More positive = more toward 180° (R)
-            angle = 270 + ((speed)/maxSpeed * 270)
-            if angle >= 360 then angle = angle - 180 end -- Correct range
+            -- More positive = more towards 180° (R)
+            angle = 270 + ((speed)/maxSpeed * 270) -- Positive speed, more positive means more towards 180°
+            if angle >= 360 then angle = angle - 360 end -- Keep angle within 0-360 range
         end
         
         -- Convert to radians
