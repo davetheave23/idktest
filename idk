@@ -1,17 +1,17 @@
 -- First, wrap the monitor to the computer (change the side if needed)
 local monitor = peripheral.wrap("top")  -- Use the side where your monitor is connected
 
--- Set text scale for better readability
-monitor.setTextScale(1)  -- Increase text size for readability
+-- Set text scale for better readability (but smaller than before)
+monitor.setTextScale(0.75)  -- Smaller text size for proper fitting
 monitor.clear()
 
 -- 1. Program Start Screen
 function displayStartScreen()
-    monitor.setCursorPos(4, 5)
+    monitor.setCursorPos(5, 5)
     monitor.setTextColor(colors.white)
     monitor.write("==      Program    ==")
     
-    monitor.setCursorPos(4, 6)
+    monitor.setCursorPos(5, 6)
     monitor.write("==         Start        ==")
     sleep(2)  -- Sleep for 2 seconds before diagnostics
 end
@@ -25,12 +25,12 @@ function runDiagnostics()
     sleep(1)
 
     local diagnostics = {
-        {"CPU Check", "ok"},
-        {"RAM Check", "ok"},
-        {"Disk Check", "fail"},
-        {"Network Check", "ok"},
-        {"Graphics Check", "ok"},
-        {"Battery Check", "fail"},
+        {"CPU Check", "ok", colors.green},
+        {"RAM Check", "ok", colors.green},
+        {"Disk Check", "fail", colors.red},
+        {"Network Check", "ok", colors.green},
+        {"Graphics Check", "ok", colors.green},
+        {"Battery Check", "fail", colors.red},
     }
 
     for i, diag in ipairs(diagnostics) do
@@ -38,13 +38,8 @@ function runDiagnostics()
         sleep(0.5)
         monitor.setCursorPos(5, 5 + i)
         monitor.write(diag[1] .. ": ")
-        if diag[2] == "ok" then
-            monitor.setTextColor(colors.green)
-            monitor.write(diag[2])
-        else
-            monitor.setTextColor(colors.red)
-            monitor.write(diag[2])
-        end
+        monitor.setTextColor(diag[3])  -- Use the specified color
+        monitor.write(diag[2])
     end
     sleep(3)  -- Sleep for 3 seconds before showing the logo
 end
@@ -56,6 +51,7 @@ function displayLogo()
     -- Draw the triangle shape (inverted triangle, base at top, tip at the bottom)
     monitor.setTextColor(colors.white)
     for i = 1, 15 do
+        -- Draw both sides of the triangle
         monitor.setCursorPos(5 + i, 5)
         monitor.write("*")
         monitor.setCursorPos(5 + i, 5 + i)
