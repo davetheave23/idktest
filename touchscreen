@@ -1,6 +1,6 @@
--- Advanced Touchscreen Train Panel for 1x4 Monitor with Dividers and Full Words
+-- Train Touchscreen Panel 1x4 Monitor, Full Words, Vertical Dividers, Big Text, Lock Feature
 
-local monitorName = "front" -- Adjust if needed
+local monitorName = "front" -- adjust if needed
 local monitor = peripheral.wrap(monitorName)
 
 if not monitor then
@@ -8,7 +8,7 @@ if not monitor then
     return
 end
 
-monitor.setTextScale(0.5) -- <<< Set text scale smaller so full words fit
+monitor.setTextScale(1) -- <<< Back to big normal text size
 local monitorWidth, monitorHeight = monitor.getSize()
 
 -- Check monitor size
@@ -26,22 +26,24 @@ local buttons = {
 
 local locked = false -- Lock state
 
--- Helper: Draw all buttons and dividers
+-- Helper: Draw everything
 local function drawButtons()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
 
-    -- Draw divider bars
+    -- Draw vertical divider bars
     monitor.setTextColor(colors.white)
-    for x = 2, monitorWidth do
-        monitor.setCursorPos(x, 1)
+    for divider = 2, 3 do
+        monitor.setCursorPos(divider, 1)
         monitor.write("|")
     end
 
-    -- Draw button labels (full words)
+    -- Draw button labels
     for _, btn in ipairs(buttons) do
-        local x1 = (btn.section - 1) * (monitorWidth / 4) + 1
-        local x2 = btn.section * (monitorWidth / 4)
+        -- Center the button names inside their blocks
+        local sectionWidth = monitorWidth / 4
+        local x1 = (btn.section - 1) * sectionWidth + 1
+        local x2 = btn.section * sectionWidth
         local labelLength = #btn.name
         local labelX = math.floor((x1 + x2) / 2) - math.floor(labelLength / 2)
         local labelY = 1
@@ -58,7 +60,7 @@ local function drawButtons()
     end
 end
 
--- Helper: Get button based on touch coordinates
+-- Helper: Get button based on touch
 local function getButtonAt(x, y)
     local sectionWidth = monitorWidth / 4
     local section = math.ceil(x / sectionWidth)
@@ -70,14 +72,14 @@ local function getButtonAt(x, y)
     return nil
 end
 
--- Helper: Output a short redstone pulse
+-- Helper: Pulse a redstone side
 local function pulse(side, duration)
     redstone.setOutput(side, true)
     sleep(duration)
     redstone.setOutput(side, false)
 end
 
--- Action handler
+-- Handle button presses
 local function handleButtonPress(name)
     if locked and name ~= "Lock" then
         print("Panel is locked. No action.")
@@ -99,7 +101,7 @@ local function handleButtonPress(name)
     end
 end
 
--- Draw initial UI
+-- Draw UI
 drawButtons()
 
 -- Event loop
