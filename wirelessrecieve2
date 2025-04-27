@@ -1,4 +1,4 @@
--- Correct Wireless Receiver that fully controls animatedspeedometer
+-- Correct receiver that properly manages the speedometer coroutine
 
 local modem = peripheral.wrap("right")
 local channel = 1
@@ -33,6 +33,16 @@ end
 
 local function runSpeedometerManager()
     while true do
+        if speedometerThread and coroutine.status(speedometerThread) ~= "dead" then
+            -- Resume speedometer thread every tick
+            local ok, err = coroutine.resume(speedometerThread)
+            if not ok then
+                print("Speedometer error:", err)
+                speedometerRunning = false
+                speedometerThread = nil
+            end
+        end
+
         local event = os.pullEvent()
 
         if event == "start_speedometer" and not speedometerRunning then
@@ -44,22 +54,19 @@ local function runSpeedometerManager()
                 speedometerRunning = false
             else
                 speedometerThread = coroutine.create(speedometerFunction)
-                coroutine.resume(speedometerThread)
             end
         elseif event == "shutdown_speedometer" and speedometerRunning then
-            print("Sending shutdown event to speedometer...")
-            -- Shutdown is handled by the running animatedspeedometer.lua itself
+            -- Just pass event, the coroutine will handle shutdown internally
             os.queueEvent("shutdown_speedometer")
         end
 
-        -- Check if speedometer thread is dead
+        -- Check if speedometer thread finished
         if speedometerThread and coroutine.status(speedometerThread) == "dead" then
-            print("Speedometer thread finished.")
+            print("Speedometer exited cleanly.")
             speedometerRunning = false
             speedometerThread = nil
         end
     end
 end
 
--- Now run both in parallel!
 parallel.waitForAny(runReceiver, runSpeedometerManager)
