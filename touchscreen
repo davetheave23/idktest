@@ -181,10 +181,26 @@ while true do
             print("Wireless signal received: turning ON screen.")
             poweredOn = true
             drawButtons()
+
         elseif tostring(message) == "power_off" then
-            print("Wireless signal received: turning OFF screen.")
-            poweredOn = false
-            drawButtons()
+            print("Wireless signal received: shutting down screen...")
+
+            -- Goodbye message
+            monitor.setBackgroundColor(colors.black)
+            monitor.clear()
+            monitor.setTextColor(colors.white)
+            monitor.setCursorPos(math.floor(monitorWidth/2)-3, math.floor(monitorHeight/2))
+            monitor.write("Goodbye")
+            sleep(1)
+
+            -- Clear everything
+            monitor.setBackgroundColor(colors.black)
+            monitor.clear()
+            term.setBackgroundColor(colors.black)
+            term.clear()
+            term.setCursorPos(1, 1)
+
+            os.shutdown()
         end
     end
 end
