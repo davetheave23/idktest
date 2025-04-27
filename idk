@@ -1,53 +1,85 @@
--- First, make sure to connect the monitor to the computer
--- This code assumes the monitor is connected to the side of the computer
+-- First, wrap the monitor to the computer (change the side if needed)
+local monitor = peripheral.wrap("top")  -- Use the side where your monitor is connected
 
-local monitor = peripheral.wrap("top")  -- Change the side if needed (e.g., "left", "right", "back", etc.)
+-- Set text scale for better readability
+monitor.setTextScale(0.5)
+monitor.clear()
 
--- Set the monitor size
-monitor.setTextScale(0.5) -- Optional: Adjust text size on monitor
-monitor.clear()  -- Clear the screen
-
--- Function to draw a square
-function drawSquare()
+-- 1. Program Start Screen
+function displayStartScreen()
     monitor.setCursorPos(5, 5)
-    monitor.write("Square:")
+    monitor.setTextColor(colors.white)
+    monitor.write("==      Program    ==")
     
-    -- Drawing a square with simple characters
-    for x = 5, 15 do
-        monitor.setCursorPos(x, 6)
-        monitor.write("X")
-        monitor.setCursorPos(x, 14)
-        monitor.write("X")
-    end
-    
-    for y = 6, 14 do
-        monitor.setCursorPos(5, y)
-        monitor.write("X")
-        monitor.setCursorPos(15, y)
-        monitor.write("X")
-    end
+    monitor.setCursorPos(5, 6)
+    monitor.write("==         Start        ==")
+    sleep(2)  -- Sleep for 2 seconds before diagnostics
 end
 
--- Function to draw a circle (simple approximation)
-function drawCircle()
-    monitor.setCursorPos(5, 16)
-    monitor.write("Circle:")
+-- 2. Diagnostics
+function runDiagnostics()
+    monitor.clear()
+    monitor.setCursorPos(5, 5)
+    monitor.setTextColor(colors.white)
+    monitor.write("Running Diagnostics...")
+    sleep(1)
 
-    -- This is a simple approximation using asterisks for a circle shape
-    local centerX = 10
-    local centerY = 20
-    local radius = 6
+    local diagnostics = {
+        {"CPU Check", "ok"},
+        {"RAM Check", "ok"},
+        {"Disk Check", "fail"},
+        {"Network Check", "ok"}
+    }
 
-    for angle = 0, 360, 5 do
-        local rad = math.rad(angle)
-        local x = math.floor(centerX + radius * math.cos(rad))
-        local y = math.floor(centerY + radius * math.sin(rad))
-        monitor.setCursorPos(x, y)
+    for i, diag in ipairs(diagnostics) do
+        monitor.setCursorPos(5, 5 + i)
+        monitor.write(diag[1] .. ": ")
+        if diag[2] == "ok" then
+            monitor.setTextColor(colors.green)
+            monitor.write(diag[2])
+        else
+            monitor.setTextColor(colors.red)
+            monitor.write(diag[2])
+        end
+    end
+    sleep(3)  -- Sleep for 3 seconds before showing the logo
+end
+
+-- 3. Logo Display with Triangle and Text
+function displayLogo()
+    monitor.clear()
+
+    -- Draw the triangle shape (inverted triangle, base at top, tip at the bottom)
+    monitor.setTextColor(colors.white)
+    for i = 1, 15 do
+        monitor.setCursorPos(5 + i, 5)
+        monitor.write("*")
+        monitor.setCursorPos(5 + i, 5 + i)
         monitor.write("*")
     end
+
+    -- Text over the triangle
+    monitor.setCursorPos(7, 6)
+    monitor.setTextColor(colors.white)
+    monitor.write("TO SEARCH")
+    
+    monitor.setCursorPos(7, 7)
+    monitor.setTextColor(colors.white)
+    monitor.write("AND")
+    
+    monitor.setCursorPos(7, 8)
+    monitor.setTextColor(colors.red)  -- Make the "DESTROY" part red
+    monitor.write("DESTROY")
+    
+    sleep(5)  -- Sleep for 5 seconds to display the logo
 end
 
--- Call the drawing functions
-drawSquare()
-sleep(2) -- Wait for 2 seconds before drawing the circle
-drawCircle()
+-- Main function to run everything
+function main()
+    displayStartScreen()
+    runDiagnostics()
+    displayLogo()
+end
+
+-- Run the main function
+main()
