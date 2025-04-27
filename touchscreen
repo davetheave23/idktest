@@ -35,6 +35,7 @@ local function drawButtons()
 
     if not poweredOn then
         -- Don't draw anything if screen is supposed to be off
+        print("Screen is off.") -- Debugging
         return
     end
 
