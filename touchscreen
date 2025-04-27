@@ -145,8 +145,22 @@ drawButtons()
 
 -- Event loop
 print("Waiting for wireless activation...")
+
+-- Start by listening for a message to stop finalscreen.lua
+rednet.open(modemSide)
+
 while true do
     local event, p1, p2, p3, p4 = os.pullEvent()
+
+    -- Check if we need to stop the finalscreen.lua program
+    if event == "modem_message" then
+        local side, channel, replyChannel, message, distance = p1, p2, p3, p4, p5
+
+        if tostring(message) == "stop_finalscreen" then
+            print("Stopping finalscreen...")
+            return -- Exit finalscreen.lua
+        end
+    end
 
     if event == "monitor_touch" then
         if poweredOn then
