@@ -1,3 +1,5 @@
+-- Wireless Receiver that starts/stops finalscreen.lua properly
+
 local modem = peripheral.wrap("bottom") -- Wireless modem under computer
 local channel = 1
 
@@ -18,13 +20,11 @@ while true do
     if senderChannel == channel and message == "button_pressed" then
         if not finalscreenRunning then
             print("Starting Finalscreen.")
-            -- Start finalscreen.lua as a new tab
-            shell.run("finalscreen.lua")
+            shell.openTab("finalscreen.lua")
             finalscreenRunning = true
         else
             print("Stopping Finalscreen.")
-            -- Send a stop signal to finalscreen.lua
-            modem.transmit(channel, channel, "stop_finalscreen")
+            modem.transmit(channel, channel, "button_pressed") -- SEND directly
             finalscreenRunning = false
         end
     end
