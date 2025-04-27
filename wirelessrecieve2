@@ -1,6 +1,6 @@
 -- Wireless Receiver for controlling animatedspeedometer.lua
 
-local modem = peripheral.wrap("left") -- Left side from computer's pov
+local modem = peripheral.wrap("right") -- Right side of the computer
 local channel = 1
 
 if not modem then
