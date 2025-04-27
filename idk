@@ -2,16 +2,16 @@
 local monitor = peripheral.wrap("top")  -- Use the side where your monitor is connected
 
 -- Set text scale for better readability
-monitor.setTextScale(0.5)
+monitor.setTextScale(1)  -- Increase text size for readability
 monitor.clear()
 
 -- 1. Program Start Screen
 function displayStartScreen()
-    monitor.setCursorPos(5, 5)
+    monitor.setCursorPos(4, 5)
     monitor.setTextColor(colors.white)
     monitor.write("==      Program    ==")
     
-    monitor.setCursorPos(5, 6)
+    monitor.setCursorPos(4, 6)
     monitor.write("==         Start        ==")
     sleep(2)  -- Sleep for 2 seconds before diagnostics
 end
@@ -28,10 +28,14 @@ function runDiagnostics()
         {"CPU Check", "ok"},
         {"RAM Check", "ok"},
         {"Disk Check", "fail"},
-        {"Network Check", "ok"}
+        {"Network Check", "ok"},
+        {"Graphics Check", "ok"},
+        {"Battery Check", "fail"},
     }
 
     for i, diag in ipairs(diagnostics) do
+        -- Add a small delay between each diagnostic line
+        sleep(0.5)
         monitor.setCursorPos(5, 5 + i)
         monitor.write(diag[1] .. ": ")
         if diag[2] == "ok" then
@@ -59,15 +63,18 @@ function displayLogo()
     end
 
     -- Text over the triangle
-    monitor.setCursorPos(7, 6)
+    local width, height = monitor.getSize()
+    
+    -- Centering "TO SEARCH" and "AND" text
+    monitor.setCursorPos(math.floor((width - 11) / 2), 6)
     monitor.setTextColor(colors.white)
     monitor.write("TO SEARCH")
     
-    monitor.setCursorPos(7, 7)
+    monitor.setCursorPos(math.floor((width - 3) / 2), 7)
     monitor.setTextColor(colors.white)
     monitor.write("AND")
     
-    monitor.setCursorPos(7, 8)
+    monitor.setCursorPos(math.floor((width - 7) / 2), 8)
     monitor.setTextColor(colors.red)  -- Make the "DESTROY" part red
     monitor.write("DESTROY")
     
