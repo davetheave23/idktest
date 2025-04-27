@@ -1,0 +1,31 @@
+-- Wireless Receiver for controlling animatedspeedometer.lua
+
+local modem = peripheral.wrap("left") -- Left side from computer's pov
+local channel = 1
+
+if not modem then
+    print("No modem found!")
+    return
+end
+
+modem.open(channel)
+
+local speedometerRunning = false
+
+print("Speedometer wireless receiver ready.")
+
+while true do
+    local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
+
+    if senderChannel == channel and message == "button_pressed" then
+        if not speedometerRunning then
+            print("Starting Speedometer.")
+            shell.openTab("animatedspeedometer.lua")
+            speedometerRunning = true
+        else
+            print("Stopping Speedometer.")
+            os.queueEvent("shutdown_speedometer")
+            speedometerRunning = false
+        end
+    end
+end
