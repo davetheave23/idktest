@@ -1,32 +1,27 @@
--- Full corrected code for dual speedometers with smooth hand animation and proper direction indicators
--- Setup - ADJUSTED for correct peripheral locations
-local monitorName = "top" -- change if needed
-local leftTrackName = "back" -- changed from "left" to "back"
-local rightTrackName = "bottom" -- changed from "right" to "bottom" 
-local inputSide = "right" -- redstone input side (lever or button)
+-- Full corrected code for dual speedometers with smooth hand animation and correct shortest rotation
 
--- Get peripherals
+local monitorName = "top"
+local leftTrackName = "back"
+local rightTrackName = "bottom"
+local inputSide = "right"
+
 local monitor = peripheral.wrap(monitorName)
 local leftTrack = peripheral.wrap(leftTrackName)
 local rightTrack = peripheral.wrap(rightTrackName)
 
--- Basic checks
 if not monitor then
     print("Monitor not found")
     return
 end
 
--- Set monitor scale
 monitor.setTextScale(0.5)
 local monitorWidth, monitorHeight = monitor.getSize()
 
--- Monitor clear function
 local function clearMonitor()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
 end
 
--- Draw point at specified coordinates - simple and reliable
 local function drawPoint(x, y, char, color)
     if x >= 1 and x <= monitorWidth and y >= 1 and y <= monitorHeight then
         monitor.setCursorPos(math.floor(x), math.floor(y))
@@ -35,7 +30,6 @@ local function drawPoint(x, y, char, color)
     end
 end
 
--- Draw circle outline
 local function drawCircle(cx, cy, radius, isConnected)
     for i = 0, 360, 3 do
         local rad = math.rad(i)
@@ -44,35 +38,15 @@ local function drawCircle(cx, cy, radius, isConnected)
         drawPoint(x, y, "*", isConnected and colors.lime or colors.red)
     end
 
-    -- Mark key points
-    drawPoint(cx, cy - radius + 1, "0", colors.yellow) -- Top = 270°
-    drawPoint(cx + radius - 1, cy, "F", colors.yellow) -- Right = 0°
-    drawPoint(cx - radius + 1, cy, "R", colors.yellow) -- Left = 180°
+    drawPoint(cx, cy - radius + 1, "0", colors.yellow)
+    drawPoint(cx + radius - 1, cy, "F", colors.yellow)
+    drawPoint(cx - radius + 1, cy, "R", colors.yellow)
 end
 
--- Draw dial with working hand movement
-local function drawDial(cx, cy, radius, speed, isConnected)
-    -- Draw dial circle and key points
+local function drawDial(cx, cy, radius, angle, speed, isConnected)
     drawCircle(cx, cy, radius, isConnected)
 
-    -- Draw the dial hand (only if connected)
     if isConnected then
-        -- Calculate angle based on speed
-        local maxSpeed = 100
-        if speed > maxSpeed then speed = maxSpeed end
-        if speed < -maxSpeed then speed = -maxSpeed end
-
-        local angle
-        if speed == 0 then
-            angle = 270
-        elseif speed < 0 then
-            angle = 270 - ((-speed) / maxSpeed * 270)
-            if angle < 0 then angle = angle + 360 end
-        else
-            angle = 270 + ((speed) / maxSpeed * 270)
-            if angle >= 360 then angle = angle - 360 end
-        end
-
         local rad = math.rad(angle)
         local needleLength = radius - 2
 
@@ -89,13 +63,11 @@ local function drawDial(cx, cy, radius, speed, isConnected)
             end
         end
 
-        -- Draw center hub
         drawPoint(cx, cy, "+", colors.cyan)
     else
         drawPoint(cx, cy, "X", colors.red)
     end
 
-    -- Draw speed values at bottom
     local speedText = isConnected and tostring(math.abs(math.floor(speed))) or "N/A"
     local direction = ""
     if isConnected then
@@ -117,7 +89,6 @@ local function drawDial(cx, cy, radius, speed, isConnected)
     end
 end
 
--- Get raw speed data
 local function getRawSpeed(track, lineNum)
     if not track then return 0 end
 
@@ -146,18 +117,42 @@ local function getRawSpeed(track, lineNum)
     return rawSpeed
 end
 
--- Smooth movement helper function
-local function moveTowards(current, target, step)
-    if math.abs(target - current) <= step then
-        return target
-    elseif current < target then
-        return current + step
+-- Speed to angle conversion
+local function speedToAngle(speed)
+    local maxSpeed = 100
+    if speed > maxSpeed then speed = maxSpeed end
+    if speed < -maxSpeed then speed = -maxSpeed end
+
+    if speed == 0 then
+        return 270
+    elseif speed < 0 then
+        local angle = 270 - ((-speed) / maxSpeed * 270)
+        if angle < 0 then angle = angle + 360 end
+        return angle
     else
-        return current - step
+        local angle = 270 + ((speed) / maxSpeed * 270)
+        if angle >= 360 then angle = angle - 360 end
+        return angle
     end
 end
 
--- Initialize displayed speeds
+-- Move angle toward target angle, shortest path
+local function moveAngleTowards(current, target, step)
+    local diff = (target - current + 360) % 360
+    if diff == 0 then
+        return current
+    elseif diff <= 180 then
+        local move = math.min(step, diff)
+        return (current + move) % 360
+    else
+        local move = math.min(step, 360 - diff)
+        return (current - move + 360) % 360
+    end
+end
+
+-- Initialize displayed angles and speeds
+local displayedLeftAngle = 270
+local displayedRightAngle = 270
 local displayedLeftSpeed = 0
 local displayedRightSpeed = 0
 
@@ -167,22 +162,24 @@ while true do
     if not inputSide or redstone.getInput(inputSide) then
         clearMonitor()
 
-        -- Read raw speeds
         local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
         local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
 
-        -- Smoothly update displayed speeds
-        displayedLeftSpeed = moveTowards(displayedLeftSpeed, leftSpeed, 2)
-        displayedRightSpeed = moveTowards(displayedRightSpeed, rightSpeed, 2)
+        local targetLeftAngle = speedToAngle(leftSpeed)
+        local targetRightAngle = speedToAngle(rightSpeed)
 
-        -- Debug: Print actual and displayed speeds
-        print("Left speed: " .. leftSpeed .. " (Display: " .. displayedLeftSpeed .. ") | Right speed: " .. rightSpeed .. " (Display: " .. displayedRightSpeed .. ")")
+        -- Smooth angle movement
+        displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5) -- 5 degrees per frame
+        displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
 
-        -- Draw dials with smoothed speeds
-        drawDial(10, 8, 7, displayedLeftSpeed, leftTrack ~= nil)
-        drawDial(30, 8, 7, displayedRightSpeed, rightTrack ~= nil)
+        -- Smooth speed display (optional for text, could skip if you want instant numbers)
+        displayedLeftSpeed = leftSpeed
+        displayedRightSpeed = rightSpeed
 
-        -- Connection status
+        -- Draw dials
+        drawDial(10, 8, 7, displayedLeftAngle, displayedLeftSpeed, leftTrack ~= nil)
+        drawDial(30, 8, 7, displayedRightAngle, displayedRightSpeed, rightTrack ~= nil)
+
         monitor.setCursorPos(1, 1)
         monitor.setTextColor(colors.yellow)
         monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
