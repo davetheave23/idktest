@@ -11,6 +11,7 @@ end
 modem.open(channel)
 
 local finalscreenRunning = false
+local finalscreenTabID = nil
 
 print("Wireless receiver ready.")
 
@@ -20,11 +21,14 @@ while true do
     if senderChannel == channel and message == "button_pressed" then
         if not finalscreenRunning then
             print("Starting Finalscreen.")
-            shell.openTab("finalscreen.lua")
+            finalscreenTabID = shell.openTab("finalscreen.lua")
             finalscreenRunning = true
         else
             print("Stopping Finalscreen.")
-            modem.transmit(channel, channel, "button_pressed") -- SEND directly
+            if finalscreenTabID then
+                -- Stop the finalscreen tab
+                shell.kill(finalscreenTabID)
+            end
             finalscreenRunning = false
         end
     end
