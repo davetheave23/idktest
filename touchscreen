@@ -1,13 +1,11 @@
--- Train Touchscreen Panel - With Dynamic Activation via Wireless Modem Signal
+-- Train Touchscreen Panel - Instant Start Version (No Wireless Activation Needed)
 
 local monitorName = "front" -- Adjust if needed
-local modemSide = "bottom"  -- Wireless modem under computer
 
 local monitor = peripheral.wrap(monitorName)
-local modem = peripheral.wrap(modemSide)
 
-if not monitor or not modem then
-    print("Monitor or modem not found!")
+if not monitor then
+    print("Monitor not found!")
     return
 end
 
@@ -26,17 +24,12 @@ local buttons = {
 
 local locked = false -- Lock state
 local smokeTimer = nil -- Timer for smoke activation
-local poweredOn = false -- Whether monitor is active
+local poweredOn = true -- Instant start: poweredOn is always true
 
 -- Helper: Draw everything
 local function drawButtons()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
-
-    if not poweredOn then
-        -- Don't draw anything if screen is supposed to be off
-        return
-    end
 
     -- Draw vertical dividers
     monitor.setTextColor(colors.white)
@@ -56,8 +49,6 @@ local function drawButtons()
 
         local labelLength = #btn.name
         local labelX = math.floor((x1 + x2) / 2) - math.floor(labelLength / 2)
-
-        -- Lower text by 1 more line
         local labelY = math.floor(monitorHeight / 2) + 1
 
         monitor.setCursorPos(labelX, labelY)
@@ -140,27 +131,26 @@ local function handleButtonPress(name)
     end
 end
 
--- Initial blank screen
+-- Initial draw
 drawButtons()
 
 -- Event loop
-print("Waiting for wireless activation...")
+print("Touchscreen ready.")
+
 while true do
-    local event, p1, p2, p3, p4 = os.pullEvent()
+    local event, p1, p2, p3 = os.pullEvent()
 
     if event == "monitor_touch" then
-        if poweredOn then
-            local side, x, y = p1, p2, p3
-            local sectionWidth = monitorWidth / 4
-            local section = math.ceil(x / sectionWidth)
+        local side, x, y = p1, p2, p3
+        local sectionWidth = monitorWidth / 4
+        local section = math.ceil(x / sectionWidth)
 
-            for _, btn in ipairs(buttons) do
-                if btn.section == section then
-                    flashButton(btn.section)
-                    handleButtonPress(btn.name)
-                    drawButtons()
-                    break
-                end
+        for _, btn in ipairs(buttons) do
+            if btn.section == section then
+                flashButton(btn.section)
+                handleButtonPress(btn.name)
+                drawButtons()
+                break
             end
         end
 
@@ -173,34 +163,5 @@ while true do
         smokeTimer = nil
         drawButtons()
         print("Smoke deactivated")
-
-    elseif event == "modem_message" then
-        local side, channel, replyChannel, message, distance = p1, p2, p3, p4, p5
-
-        if tostring(message) == "power_on" then
-            print("Wireless signal received: turning ON screen.")
-            poweredOn = true
-            drawButtons()
-
-        elseif tostring(message) == "power_off" then
-            print("Wireless signal received: shutting down screen...")
-
-            -- Goodbye message
-            monitor.setBackgroundColor(colors.black)
-            monitor.clear()
-            monitor.setTextColor(colors.white)
-            monitor.setCursorPos(math.floor(monitorWidth/2)-3, math.floor(monitorHeight/2))
-            monitor.write("Goodbye")
-            sleep(1)
-
-            -- Clear everything
-            monitor.setBackgroundColor(colors.black)
-            monitor.clear()
-            term.setBackgroundColor(colors.black)
-            term.clear()
-            term.setCursorPos(1, 1)
-
-            os.shutdown()
-        end
     end
 end
