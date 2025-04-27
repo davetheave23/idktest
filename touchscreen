@@ -1,4 +1,4 @@
--- Train Touchscreen Panel - Instant Start + Wireless Shutdown + Custom Message
+-- Train Touchscreen Panel - Instant Start + Wireless Shutdown + Correct Centered Message
 
 local monitorName = "front" -- Adjust if needed
 local modemSide = "bottom"  -- Wireless modem side
@@ -13,7 +13,7 @@ if not monitor or not modem then
     return
 end
 
-modem.open(channel) -- Important: OPEN modem on correct channel!
+modem.open(channel) -- Open modem on correct channel
 
 monitor.setTextScale(1) -- Big text
 local monitorWidth, monitorHeight = monitor.getSize()
@@ -171,17 +171,17 @@ while true do
         if modemChannel == channel and tostring(message) == "button_pressed" then
             print("Shutdown signal received!")
 
-            -- Custom System Shutdown message
+            -- Custom System Shutdown message (corrected for 39x5 monitor)
             monitor.setBackgroundColor(colors.black)
             monitor.clear()
             monitor.setTextColor(colors.white)
 
-            -- First line
-            monitor.setCursorPos(math.floor(monitorWidth / 2) - 10, math.floor(monitorHeight / 2) - 1)
+            -- First line (System)
+            monitor.setCursorPos(7, 2)
             monitor.write("==          System          ==")
 
-            -- Second line
-            monitor.setCursorPos(math.floor(monitorWidth / 2) - 10, math.floor(monitorHeight / 2) + 1)
+            -- Second line (Shutdown)
+            monitor.setCursorPos(8, 4)
             monitor.write("==        Shutdown        ==")
 
             sleep(1)
