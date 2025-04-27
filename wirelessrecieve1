@@ -1,26 +1,23 @@
 -- Receiver side
-rednet.open("bottom") -- open the modem on the front side
+rednet.open("bottom") -- open the modem on the bottom side
 local channel = 1
 
 local finalscreenRunning = false
-local finalscreenProcessID = nil
 
 while true do
     local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
     
     if senderChannel == channel and message == "button_pressed" then
         if not finalscreenRunning then
-            -- Start touchscreen.lua
-            finalscreenProcessID = shell.openTab("finalscreen.lua")
+            -- Start finalscreen
+            shell.openTab("finalscreen.lua", "start")
             finalscreenRunning = true
-            print("Touchscreen started")
+            print("Finalscreen started")
         else
-            -- Stop touchscreen.lua
-            if finalscreenProcessID then
-                shell.terminate(finalscreenProcessID)
-            end
+            -- Tell finalscreen to stop
+            rednet.broadcast("stop_finalscreen", channel)
             finalscreenRunning = false
-            print("Touchscreen stopped")
+            print("Finalscreen stopping")
         end
     end
 end
