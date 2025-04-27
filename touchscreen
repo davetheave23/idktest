@@ -1,10 +1,13 @@
--- Train Touchscreen Panel - Proper Monitor Size Detection, Vertical Centered Text, Soft Gray Flash
+-- Train Touchscreen Panel - With Dynamic Activation via Wireless Modem Signal
 
 local monitorName = "front" -- Adjust if needed
-local monitor = peripheral.wrap(monitorName)
+local modemSide = "bottom"  -- Wireless modem under computer
 
-if not monitor then
-    print("Monitor not found!")
+local monitor = peripheral.wrap(monitorName)
+local modem = peripheral.wrap(modemSide)
+
+if not monitor or not modem then
+    print("Monitor or modem not found!")
     return
 end
 
@@ -23,11 +26,17 @@ local buttons = {
 
 local locked = false -- Lock state
 local smokeTimer = nil -- Timer for smoke activation
+local poweredOn = false -- Whether monitor is active
 
 -- Helper: Draw everything
 local function drawButtons()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
+
+    if not poweredOn then
+        -- Don't draw anything if screen is supposed to be off
+        return
+    end
 
     -- Draw vertical dividers
     monitor.setTextColor(colors.white)
@@ -48,15 +57,15 @@ local function drawButtons()
         local labelLength = #btn.name
         local labelX = math.floor((x1 + x2) / 2) - math.floor(labelLength / 2)
 
-        -- Proper vertical centering (use about row 3 for big screens)
-        local labelY = math.floor(monitorHeight / 2)
+        -- Lower text by 1 more line
+        local labelY = math.floor(monitorHeight / 2) + 1
 
         monitor.setCursorPos(labelX, labelY)
 
         if locked and btn.name ~= "Lock" then
             monitor.setTextColor(colors.red)
         elseif (btn.toggle and btn.active) or (btn.name == "Smoke" and btn.active) or (btn.name == "Lock" and locked) then
-            monitor.setTextColor(colors.lime) -- Green if active
+            monitor.setTextColor(colors.lime)
         else
             monitor.setTextColor(colors.white)
         end
@@ -75,16 +84,16 @@ local function getButtonByName(name)
     return nil
 end
 
--- Helper: Flash button when pressed (SOFTER flash now)
+-- Helper: Flash button when pressed (soft gray flash)
 local function flashButton(section)
-    -- Calculate section bounds
+    if not poweredOn then return end
+
     local sectionWidth = monitorWidth / 4
     local x1 = (section - 1) * sectionWidth + 1
     local x2 = section * sectionWidth
 
-    monitor.setBackgroundColor(colors.gray) -- <<< Softer flash color!
+    monitor.setBackgroundColor(colors.gray)
 
-    -- Fill background of the touched section
     for y = 1, monitorHeight do
         monitor.setCursorPos(x1, y)
         monitor.write(string.rep(" ", x2 - x1 + 1))
@@ -92,7 +101,6 @@ local function flashButton(section)
 
     sleep(0.15)
 
-    -- Redraw everything after flash
     drawButtons()
 end
 
@@ -132,30 +140,31 @@ local function handleButtonPress(name)
     end
 end
 
--- Draw UI
+-- Initial blank screen
 drawButtons()
 
 -- Event loop
-print("Touchscreen ready. Waiting for input...")
+print("Waiting for wireless activation...")
 while true do
-    local event, p1, p2, p3 = os.pullEvent()
+    local event, p1, p2, p3, p4 = os.pullEvent()
 
     if event == "monitor_touch" then
-        local side, x, y = p1, p2, p3
-        local sectionWidth = monitorWidth / 4
-        local section = math.ceil(x / sectionWidth)
+        if poweredOn then
+            local side, x, y = p1, p2, p3
+            local sectionWidth = monitorWidth / 4
+            local section = math.ceil(x / sectionWidth)
 
-        for _, btn in ipairs(buttons) do
-            if btn.section == section then
-                flashButton(btn.section)
-                handleButtonPress(btn.name)
-                drawButtons()
-                break
+            for _, btn in ipairs(buttons) do
+                if btn.section == section then
+                    flashButton(btn.section)
+                    handleButtonPress(btn.name)
+                    drawButtons()
+                    break
+                end
             end
         end
 
     elseif event == "timer" and p1 == smokeTimer then
-        -- Smoke timer expired
         local smokeBtn = getButtonByName("Smoke")
         if smokeBtn then
             smokeBtn.active = false
@@ -164,5 +173,18 @@ while true do
         smokeTimer = nil
         drawButtons()
         print("Smoke deactivated")
+
+    elseif event == "modem_message" then
+        local side, channel, replyChannel, message, distance = p1, p2, p3, p4, p5
+
+        if tostring(message) == "power_on" then
+            print("Wireless signal received: turning ON screen.")
+            poweredOn = true
+            drawButtons()
+        elseif tostring(message) == "power_off" then
+            print("Wireless signal received: turning OFF screen.")
+            poweredOn = false
+            drawButtons()
+        end
     end
 end
