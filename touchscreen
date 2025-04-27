@@ -181,9 +181,9 @@ while true do
             monitor.setCursorPos(5, 2)
             monitor.write("==          System          ==")
             
-            -- Second line (Shutdown) → evenly spaced
+            -- Second line (Shutdown) → evenly spaced fixed
             monitor.setCursorPos(5, 4)
-            monitor.write("==          Shutdown         ==")
+            monitor.write("==         Shutdown         ==")
             
             sleep(1)
             
