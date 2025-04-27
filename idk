@@ -1,12 +1,12 @@
--- Startup animation using Tom's Peripherals and base ComputerCraft
+-- Simplified startup animation for ComputerCraft
 local monitor = peripheral.find("monitor") -- Use a standard monitor peripheral
-local modem = peripheral.find("modem")
-local rd = peripheral.find("redstone_integrator") -- Tom's Peripherals redstone integrator
+if not monitor then
+  monitor = term -- Fall back to terminal if no monitor is connected
+end
 
 -- Configure monitor settings
-monitor.setTextScale(0.5) -- Small text for higher resolution
-local width, height = monitor.getSize()
 monitor.clear()
+local width, height = monitor.getSize()
 
 -- Colors
 local WHITE = colors.white
@@ -20,16 +20,6 @@ local function filledRectangle(x, y, width, height, color)
         monitor.setCursorPos(x, yPos)
         monitor.write(string.rep(" ", width))
     end
-    monitor.setBackgroundColor(colors.black) -- Reset color
-end
-
--- Helper function to draw text
-local function drawText(x, y, text, textColor, backgroundColor)
-    monitor.setCursorPos(x, y)
-    monitor.setTextColor(textColor)
-    monitor.setBackgroundColor(backgroundColor)
-    monitor.write(text)
-    monitor.setTextColor(colors.white) -- Reset color
     monitor.setBackgroundColor(colors.black) -- Reset color
 end
 
@@ -57,77 +47,21 @@ local function screenInitialization()
     filledRectangle(math.floor(40 * scaleX), math.floor(288 * scaleY), math.floor(4 * scaleX), math.floor(32 * scaleY), WHITE)
     filledRectangle(math.floor(118 * scaleX), math.floor(256 * scaleY), math.floor(4 * scaleX), math.floor(64 * scaleY), WHITE)
     filledRectangle(math.floor(210 * scaleX), math.floor(256 * scaleY), math.floor(4 * scaleX), math.floor(64 * scaleY), WHITE)
-    
-    -- Uncomment to add labels
-    --[[
-    drawText(math.floor(176 * scaleX), math.floor(16 * scaleY), "180", WHITE, BLACK)
-    
-    drawText(math.floor(5 * scaleX), math.floor(60 * scaleY), " 20", WHITE, BLACK)
-    drawText(1, math.floor(64 * scaleY), ">", WHITE, BLACK)
-    drawText(1, math.floor(88 * scaleY), "-", WHITE, BLACK) 
-    drawText(math.floor(5 * scaleX), math.floor(110 * scaleY), " 10", WHITE, BLACK)
-    drawText(1, math.floor(114 * scaleY), ">", WHITE, BLACK)
-    drawText(1, math.floor(138 * scaleY), "-", WHITE, BLACK)
-    drawText(math.floor(5 * scaleX), math.floor(160 * scaleY), " 0", WHITE, BLACK)
-    drawText(1, math.floor(164 * scaleY), ">", WHITE, BLACK)
-    drawText(1, math.floor(188 * scaleY), "-", WHITE, BLACK)
-    drawText(math.floor(5 * scaleX), math.floor(210 * scaleY), "-10", WHITE, BLACK)
-    drawText(1, math.floor(214 * scaleY), ">", WHITE, BLACK)
-    drawText(1, math.floor(238 * scaleY), "-", WHITE, BLACK)
-    drawText(math.floor(5 * scaleX), math.floor(260 * scaleY), "-20", WHITE, BLACK)
-    drawText(1, math.floor(264 * scaleY), ">", WHITE, BLACK)
-    --]]
 end
 
--- Helper function to write info to file
-local function writeInfo(text, txt)
-    local fileName = tostring(txt)
-    local file = fs.open(fileName, "w")
-    file.write(text)
-    file.close()
-end
+-- Initialize screen and run the animation sequence
+print("Starting animation sequence...")
 
--- Initialize screen and start the program
+-- Initial animation sequence
 screenInitialization()
-sleep(0.1)
-screenInitialization()
+sleep(0.5)
 
--- Open wireless channel if modem is present
-if modem then
-    modem.open(17068)
-    print("Wireless channel 17068 opened")
-else
-    print("Warning: No modem found")
+-- Add some animation effects
+for i = 1, 3 do
+    monitor.clear()
+    sleep(0.2)
+    screenInitialization()
+    sleep(0.3)
 end
 
--- Main loop
-local bullet = "bulletLeft.txt"
-while true do
-    -- Listen for modem messages or other events
-    local event, side, channel, replyChannel, message, distance
-    
-    -- Check for redstone signal from Tom's Peripheral
-    local redstoneSignal = rd and rd.getInput("back") or false
-    
-    -- Process modem messages
-    if modem then
-        event, side, channel, replyChannel, message, distance = os.pullEvent("modem_message")
-        if channel == 17068 then
-            local receiveMessage = message
-            writeInfo(receiveMessage, bullet)
-            screenInitialization()
-        end
-    else
-        -- If no modem, just wait for redstone signal changes
-        os.pullEvent("redstone")
-        screenInitialization()
-    end
-    
-    -- Add additional functionality for redstone integration
-    if redstoneSignal then
-        writeInfo("Redstone signal detected", "redstone.txt")
-    end
-    
-    -- Refresh screen periodically
-    sleep(0.1)
-end
+print("Startup animation complete")
