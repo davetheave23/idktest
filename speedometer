@@ -55,29 +55,34 @@ local function drawDial(cx, cy, radius, speed, isConnected)
     -- Draw dial circle and key points
     drawCircle(cx, cy, radius, isConnected)
     
-    -- REVERSED INTERPRETATION: negative = forward, positive = reverse
-    -- Flip the speed sign for dial calculation
-    local displaySpeed = -speed
-    
     -- Draw the dial hand (only if connected)
     if isConnected then
-        -- Calculate angle based on display speed (which is the reversed sign)
+        -- Calculate angle based on speed directly
         local maxSpeed = 100 -- max speed for full deflection
-        if displaySpeed > maxSpeed then displaySpeed = maxSpeed end
-        if displaySpeed < -maxSpeed then displaySpeed = -maxSpeed end
+        if speed > maxSpeed then speed = maxSpeed end
+        if speed < -maxSpeed then speed = -maxSpeed end
         
-        -- Angle calculation using mathematical angles (0° = right, 90° = down, 180° = left, 270° = up)
+        -- Angle calculation - COMPLETELY REVISED
+        -- For our setup: 
+        -- - Negative speed = Forward = dial points to F (right side, 0°)
+        -- - Positive speed = Reverse = dial points to R (left side, 180°)
+        -- - Zero speed = dial points to 0 (top, 270°)
+        
         local angle
-        if displaySpeed == 0 then
-            angle = 270 -- pointing up
-        elseif displaySpeed > 0 then
-            -- For positive displaySpeed (which is actually negative speed = forward)
-            -- Map speed 0->100 to angle 270->0 (toward F label)
-            angle = 270 - (displaySpeed/maxSpeed * 90)
+        if speed == 0 then
+            angle = 270 -- pointing up at zero
+        elseif speed < 0 then
+            -- Forward (negative speed): angle between 270° (up) and 0° (right)
+            -- Map -1 to -100 to angle 270° to 0°
+            -- More negative = more toward 0° (F)
+            angle = 270 - ((-speed)/maxSpeed * 270)
+            if angle < 0 then angle = angle + 360 end -- Keep angle in 0-360 range
         else
-            -- For negative displaySpeed (which is actually positive speed = reverse)
-            -- Map speed 0->-100 to angle 270->180 (toward R label)
-            angle = 270 + (math.abs(displaySpeed)/maxSpeed * 90)
+            -- Reverse (positive speed): angle between 270° (up) and 180° (left)
+            -- Map 1 to 100 to angle 270° to 180°
+            -- More positive = more toward 180° (R)
+            angle = 270 + ((speed)/maxSpeed * 270)
+            if angle >= 360 then angle = angle - 180 end -- Correct range
         end
         
         -- Convert to radians
@@ -114,11 +119,11 @@ local function drawDial(cx, cy, radius, speed, isConnected)
     local speedText = isConnected and tostring(math.abs(math.floor(speed))) or "N/A"
     local direction = ""
     if isConnected then
-        -- REVERSED: negative = F, positive = R
-        if speed < 0 then  -- CHANGED condition
-            direction = "F" -- Forward (negative speed)
-        elseif speed > 0 then  -- CHANGED condition
-            direction = "R" -- Reverse (positive speed)
+        -- Negative = Forward, Positive = Reverse
+        if speed < 0 then  
+            direction = "F" -- Forward
+        elseif speed > 0 then
+            direction = "R" -- Reverse
         end
     end
     
@@ -129,7 +134,7 @@ local function drawDial(cx, cy, radius, speed, isConnected)
     
     if direction ~= "" then
         monitor.setCursorPos(cx + #speedText/2 + 1, cy + radius + 1)
-        monitor.setTextColor(speed < 0 and colors.lime or colors.red)  -- CHANGED condition
+        monitor.setTextColor(speed < 0 and colors.lime or colors.red)
         monitor.write(direction)
     end
 end
