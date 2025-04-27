@@ -171,18 +171,19 @@ while true do
         if modemChannel == channel and tostring(message) == "button_pressed" then
             print("Shutdown signal received!")
 
-            -- Corrected Centered Shutdown Message
+            -- Corrected Centered and Shifted Shutdown Message
+            
             monitor.setBackgroundColor(colors.black)
             monitor.clear()
             monitor.setTextColor(colors.white)
             
             -- First line (System)
-            monitor.setCursorPos(6, 2)
+            monitor.setCursorPos(5, 2)
             monitor.write("==          System          ==")
             
-            -- Second line (Shutdown)
-            monitor.setCursorPos(7, 4)
-            monitor.write("==        Shutdown        ==")
+            -- Second line (Shutdown) → evenly spaced
+            monitor.setCursorPos(5, 4)
+            monitor.write("==         Shutdown         ==")
             
             sleep(1)
             
@@ -194,7 +195,7 @@ while true do
             term.setCursorPos(1, 1)
             
             os.shutdown()
-            
+
         end
     end
 end
