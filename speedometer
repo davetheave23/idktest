@@ -44,10 +44,10 @@ local function drawCircle(cx, cy, radius, isConnected)
         drawPoint(x, y, "*", isConnected and colors.lime or colors.red)
     end
     
-    -- Mark key points - SWAPPED F and R
+    -- Mark key points - KEEPING F and R in their new positions
     drawPoint(cx, cy - radius + 1, "0", colors.yellow) -- Top = 270°
-    drawPoint(cx + radius - 1, cy, "F", colors.yellow) -- Right = 0° - CHANGED FROM R TO F
-    drawPoint(cx - radius + 1, cy, "R", colors.yellow) -- Left = 180° - CHANGED FROM F TO R
+    drawPoint(cx + radius - 1, cy, "F", colors.yellow) -- Right = 0°
+    drawPoint(cx - radius + 1, cy, "R", colors.yellow) -- Left = 180°
 end
 
 -- Draw dial with working hand movement
@@ -67,13 +67,13 @@ local function drawDial(cx, cy, radius, speed, isConnected)
         if speed == 0 then
             angle = 270 -- pointing up
         elseif speed > 0 then
-            -- For positive speed, rotate from up (270°) towards right (0°) - CHANGED DIRECTION
+            -- For positive speed, rotate from up (270°) towards right (0°) where F is
             -- Map speed 0->100 to angle 270->0
-            angle = 270 + (speed/maxSpeed * 90)
+            angle = 270 - (speed/maxSpeed * 90) -- REVERTED to original direction
         else
-            -- For negative speed, rotate from up (270°) towards left (180°) - CHANGED DIRECTION
+            -- For negative speed, rotate from up (270°) towards left (180°) where R is
             -- Map speed 0->-100 to angle 270->180
-            angle = 270 - (math.abs(speed)/maxSpeed * 90)
+            angle = 270 + (math.abs(speed)/maxSpeed * 90) -- REVERTED to original direction
         end
         
         -- Convert to radians
@@ -111,9 +111,9 @@ local function drawDial(cx, cy, radius, speed, isConnected)
     local direction = ""
     if isConnected then
         if speed > 0 then
-            direction = "F" -- Forward - CONSISTENT with dial marker
+            direction = "F" -- Forward
         elseif speed < 0 then
-            direction = "R" -- Reverse - CONSISTENT with dial marker
+            direction = "R" -- Reverse
         end
     end
     
