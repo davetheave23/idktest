@@ -1,4 +1,4 @@
--- Touchscreen Control Panel for Train
+-- Advanced Touchscreen Train Panel with Lock Feature
 
 local monitorName = "front" -- Adjust if needed
 local monitor = peripheral.wrap(monitorName)
@@ -8,61 +8,102 @@ if not monitor then
     return
 end
 
--- Setup
 monitor.setTextScale(1)
 local monitorWidth, monitorHeight = monitor.getSize()
 
--- Define button areas (x1, y1, x2, y2)
+-- Define button sections
 local buttons = {
-    {name = "Hatch", x1 = 1,  y1 = 1, x2 = 10, y2 = 3, color = colors.blue},
-    {name = "Lights", x1 = 11, y1 = 1, x2 = 20, y2 = 3, color = colors.yellow},
-    {name = "Smoke", x1 = 21, y1 = 1, x2 = 30, y2 = 3, color = colors.gray},
+    {name = "Hatch", section = 1, color = colors.white},
+    {name = "Lights", section = 2, color = colors.white},
+    {name = "Smoke", section = 3, color = colors.white},
+    {name = "Lock", section = 4, color = colors.white},
 }
 
--- Helper: Draw all buttons
+local locked = false -- Lock state
+
+-- Helper: Get section boundaries
+local function getSectionBounds(section)
+    local sectionWidth = math.floor(monitorWidth / 4)
+    local x1 = (section - 1) * sectionWidth + 1
+    local x2 = section * sectionWidth
+    return x1, x2
+end
+
+-- Helper: Draw all buttons and dividers
 local function drawButtons()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
 
+    -- Draw vertical dividers
+    monitor.setTextColor(colors.white)
+    local sectionWidth = math.floor(monitorWidth / 4)
+    for i = 1, 3 do
+        local dividerX = i * sectionWidth + 1
+        for y = 1, monitorHeight do
+            monitor.setCursorPos(dividerX, y)
+            monitor.write("|")
+        end
+    end
+
+    -- Draw button labels
     for _, btn in ipairs(buttons) do
-        monitor.setBackgroundColor(btn.color)
-        for y = btn.y1, btn.y2 do
-            monitor.setCursorPos(btn.x1, y)
-            local width = btn.x2 - btn.x1 + 1
-            monitor.write(string.rep(" ", width))
+        local x1, x2 = getSectionBounds(btn.section)
+        local labelX = math.floor((x1 + x2) / 2) - math.floor(#btn.name / 2)
+        local labelY = math.floor(monitorHeight / 2)
+        monitor.setCursorPos(labelX, labelY)
+
+        if locked and btn.name ~= "Lock" then
+            monitor.setTextColor(colors.red)
+        else
+            monitor.setTextColor(colors.white)
         end
 
-        -- Write button name centered
-        local labelX = math.floor((btn.x1 + btn.x2) / 2) - math.floor(#btn.name / 2)
-        local labelY = math.floor((btn.y1 + btn.y2) / 2)
-        monitor.setCursorPos(labelX, labelY)
-        monitor.setTextColor(colors.black)
         monitor.write(btn.name)
     end
 end
 
--- Helper: Check if a point is inside a button
-local function isInside(x, y, btn)
-    return x >= btn.x1 and x <= btn.x2 and y >= btn.y1 and y <= btn.y2
+-- Helper: Check which button was touched
+local function getButtonAt(x, y)
+    local sectionWidth = math.floor(monitorWidth / 4)
+    local section = math.ceil(x / sectionWidth)
+    for _, btn in ipairs(buttons) do
+        if btn.section == section then
+            return btn
+        end
+    end
+    return nil
+end
+
+-- Helper: Output a short redstone pulse
+local function pulse(side, duration)
+    redstone.setOutput(side, true)
+    sleep(duration)
+    redstone.setOutput(side, false)
 end
 
 -- Action handler
 local function handleButtonPress(name)
+    if locked and name ~= "Lock" then
+        print("Panel is locked. No action.")
+        return
+    end
+
     if name == "Hatch" then
-        redstone.setOutput("left", not redstone.getOutput("left")) -- Toggle hatch
-        print("Toggled Hatch")
+        print("Pulsing Hatch")
+        pulse("left", 0.5)
     elseif name == "Lights" then
-        redstone.setOutput("right", not redstone.getOutput("right")) -- Toggle lights
-        print("Toggled Lights")
+        print("Pulsing Lights")
+        pulse("right", 0.5)
     elseif name == "Smoke" then
-        redstone.setOutput("bottom", true) -- Turn on smokescreen
-        sleep(2)
-        redstone.setOutput("bottom", false) -- Turn off after 2 seconds
-        print("Activated Smokescreen")
+        print("Pulsing Smoke")
+        pulse("bottom", 0.5)
+    elseif name == "Lock" then
+        locked = not locked
+        print(locked and "Panel locked" or "Panel unlocked")
     end
 end
 
--- Draw UI
+-- Draw initial UI
 drawButtons()
 
 -- Event loop
@@ -70,10 +111,9 @@ print("Touchscreen ready. Waiting for input...")
 while true do
     local event, side, x, y = os.pullEvent("monitor_touch")
 
-    -- Check which button was touched
-    for _, btn in ipairs(buttons) do
-        if isInside(x, y, btn) then
-            handleButtonPress(btn.name)
-        end
+    local btn = getButtonAt(x, y)
+    if btn then
+        handleButtonPress(btn.name)
+        drawButtons() -- Redraw to update lock color
     end
 end
