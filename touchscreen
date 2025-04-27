@@ -35,7 +35,6 @@ local function drawButtons()
 
     if not poweredOn then
         -- Don't draw anything if screen is supposed to be off
-        print("Screen is off.") -- Debugging
         return
     end
 
@@ -146,28 +145,8 @@ drawButtons()
 
 -- Event loop
 print("Waiting for wireless activation...")
-
--- Start by listening for a message to stop finalscreen.lua
-rednet.open(modemSide)
-
 while true do
     local event, p1, p2, p3, p4 = os.pullEvent()
-
-    -- Debugging: Check for event types and values
-    print("Received event: " .. event)
-    
-    -- Check if we need to stop the finalscreen.lua program
-    if event == "modem_message" then
-        local side, channel, replyChannel, message, distance = p1, p2, p3, p4, p5
-
-        -- Debugging: Check message received
-        print("Received modem message: " .. tostring(message))
-
-        if tostring(message) == "stop_finalscreen" then
-            print("Stopping finalscreen...")
-            return -- Exit finalscreen.lua
-        end
-    end
 
     if event == "monitor_touch" then
         if poweredOn then
