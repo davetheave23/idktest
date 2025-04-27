@@ -1,9 +1,8 @@
--- Animated Dual Speedometer - Full Correct Version
+-- Animated Dual Speedometer - Cleaned Final Version
 
 local monitorName = "top" -- Change this to your monitor side if needed
 local leftTrackName = "back"
 local rightTrackName = "bottom"
-local inputSide = "right"
 
 print("Wrapping peripherals...")
 local monitor = peripheral.wrap(monitorName)
@@ -16,7 +15,7 @@ if not monitor then
 end
 
 print("Monitor found. Redirecting output...")
-term.redirect(monitor) -- <<< CRITICAL
+term.redirect(monitor)
 
 monitor.setTextScale(0.5)
 local monitorWidth, monitorHeight = monitor.getSize()
@@ -168,37 +167,34 @@ while true do
     if event == "shutdown_speedometer" then
         print("Shutdown event received. Cleaning up...")
         clearMonitor()
-        term.redirect(term.native()) -- Reset terminal output!
+        term.redirect(term.native()) -- Reset terminal output
         term.setBackgroundColor(colors.black)
         term.clear()
         term.setCursorPos(1, 1)
         print("Speedometer shutdown complete.")
         break
     else
-        if not inputSide or redstone.getInput(inputSide) then
-            clearMonitor()
+        -- Update the speedometers every cycle
+        clearMonitor()
 
-            local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
-            local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
+        local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
+        local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
 
-            local targetLeftAngle = speedToAngle(leftSpeed)
-            local targetRightAngle = speedToAngle(rightSpeed)
+        local targetLeftAngle = speedToAngle(leftSpeed)
+        local targetRightAngle = speedToAngle(rightSpeed)
 
-            displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5)
-            displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
+        displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5)
+        displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
 
-            displayedLeftSpeed = leftSpeed
-            displayedRightSpeed = rightSpeed
+        displayedLeftSpeed = leftSpeed
+        displayedRightSpeed = rightSpeed
 
-            drawDial(10, 8, 7, displayedLeftAngle, displayedLeftSpeed, leftTrack ~= nil)
-            drawDial(30, 8, 7, displayedRightAngle, displayedRightSpeed, rightTrack ~= nil)
+        drawDial(10, 8, 7, displayedLeftAngle, displayedLeftSpeed, leftTrack ~= nil)
+        drawDial(30, 8, 7, displayedRightAngle, displayedRightSpeed, rightTrack ~= nil)
 
-            monitor.setCursorPos(1, 1)
-            monitor.setTextColor(colors.yellow)
-            monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
-        else
-            clearMonitor()
-        end
+        monitor.setCursorPos(1, 1)
+        monitor.setTextColor(colors.yellow)
+        monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
     end
 
     sleep(0.1)
