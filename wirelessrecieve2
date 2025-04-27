@@ -1,6 +1,6 @@
--- Correct receiver that properly manages the speedometer coroutine
+-- Wireless Receiver to control animatedspeedometer.lua properly
 
-local modem = peripheral.wrap("right")
+local modem = peripheral.wrap("right") -- or correct side!
 local channel = 1
 
 if not modem then
@@ -11,10 +11,10 @@ end
 modem.open(channel)
 
 local speedometerRunning = false
-local speedometerThread = nil
 
-local function runReceiver()
-    print("Receiver started.")
+-- Listen for wireless button presses
+local function receiverLoop()
+    print("Receiver started. Waiting for wireless button...")
 
     while true do
         local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
@@ -31,42 +31,28 @@ local function runReceiver()
     end
 end
 
-local function runSpeedometerManager()
+-- Manage starting/stopping the speedometer
+local function managerLoop()
     while true do
-        if speedometerThread and coroutine.status(speedometerThread) ~= "dead" then
-            -- Resume speedometer thread every tick
-            local ok, err = coroutine.resume(speedometerThread)
-            if not ok then
-                print("Speedometer error:", err)
-                speedometerRunning = false
-                speedometerThread = nil
-            end
-        end
-
         local event = os.pullEvent()
 
         if event == "start_speedometer" and not speedometerRunning then
             speedometerRunning = true
-            print("Loading speedometer code...")
-            local speedometerFunction = loadfile("animatedspeedometer.lua")
-            if not speedometerFunction then
-                print("Error loading animatedspeedometer.lua!")
+            print("Running animatedspeedometer.lua")
+            
+            -- Run animatedspeedometer.lua as its own task
+            parallel.waitForAny(function()
+                shell.run("animatedspeedometer.lua")
                 speedometerRunning = false
-            else
-                speedometerThread = coroutine.create(speedometerFunction)
-            end
+                print("Speedometer exited cleanly.")
+            end)
+        
         elseif event == "shutdown_speedometer" and speedometerRunning then
-            -- Just pass event, the coroutine will handle shutdown internally
+            print("Sending shutdown event to speedometer...")
             os.queueEvent("shutdown_speedometer")
-        end
-
-        -- Check if speedometer thread finished
-        if speedometerThread and coroutine.status(speedometerThread) == "dead" then
-            print("Speedometer exited cleanly.")
-            speedometerRunning = false
-            speedometerThread = nil
         end
     end
 end
 
-parallel.waitForAny(runReceiver, runSpeedometerManager)
+-- Run both loops at the same time
+parallel.waitForAny(receiverLoop, managerLoop)
