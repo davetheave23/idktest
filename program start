@@ -15,12 +15,12 @@ function displayProgramStart()
     -- Set cursor to center the text
     monitor.setCursorPos(math.floor((width - 9) / 2), math.floor((height - 2) / 2))
 
-    -- Set text color and write the message
+    -- Set text color and write the message with tighter spacing
     monitor.setTextColor(colors.white)
-    monitor.write("== Program ==")
+    monitor.write("==Program==")
 
     monitor.setCursorPos(math.floor((width - 9) / 2), math.floor((height - 1) / 2) + 1)
-    monitor.write("== Start ==")
+    monitor.write("==Start==")
 
     sleep(2)  -- Display for 2 seconds before proceeding
 end
