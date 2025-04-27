@@ -1,8 +1,8 @@
 -- Train Touchscreen Panel - Instant Start + Wireless Shutdown + Correct Centered Message
 
-local monitorName = "front" -- Adjust if needed
+local monitorName = "front" -- Monitor side
 local modemSide = "bottom"  -- Wireless modem side
-local channel = 1           -- Channel to listen for button presses
+local channel = 1           -- Wireless channel to listen on
 
 -- Wrap peripherals
 local monitor = peripheral.wrap(monitorName)
@@ -13,14 +13,14 @@ if not monitor or not modem then
     return
 end
 
-modem.open(channel) -- Open modem on correct channel
+modem.open(channel) -- Open modem for direct messages
 
 monitor.setTextScale(1) -- Big text
 local monitorWidth, monitorHeight = monitor.getSize()
 
 print("Monitor size detected: "..monitorWidth.."x"..monitorHeight)
 
--- Define button sections and states
+-- Button setup
 local buttons = {
     {name = "Hatch", section = 1, side = "back", toggle = true, active = false},
     {name = "Lights", section = 2, side = "left", toggle = true, active = false},
@@ -28,18 +28,17 @@ local buttons = {
     {name = "Lock", section = 4, toggle = false, active = false},
 }
 
-local locked = false -- Lock state
-local smokeTimer = nil -- Timer for smoke activation
-local poweredOn = true -- We start active!
+local locked = false
+local smokeTimer = nil
+local poweredOn = true -- Start active
 
--- Draw the screen
+-- Drawing function
 local function drawButtons()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
-
     monitor.setTextColor(colors.white)
 
-    -- Draw vertical dividers
+    -- Dividers
     for i = 1, 3 do
         local dividerX = math.floor((i * monitorWidth) / 4) + 1
         for y = 1, monitorHeight do
@@ -48,7 +47,7 @@ local function drawButtons()
         end
     end
 
-    -- Draw each button label
+    -- Button labels
     for _, btn in ipairs(buttons) do
         local sectionWidth = monitorWidth / 4
         local x1 = (btn.section - 1) * sectionWidth + 1
@@ -71,6 +70,7 @@ local function drawButtons()
     end
 end
 
+-- Find a button by name
 local function getButtonByName(name)
     for _, btn in ipairs(buttons) do
         if btn.name == name then
@@ -80,6 +80,7 @@ local function getButtonByName(name)
     return nil
 end
 
+-- Flash button when touched
 local function flashButton(section)
     if not poweredOn then return end
     local sectionWidth = monitorWidth / 4
@@ -87,7 +88,6 @@ local function flashButton(section)
     local x2 = section * sectionWidth
 
     monitor.setBackgroundColor(colors.gray)
-
     for y = 1, monitorHeight do
         monitor.setCursorPos(x1, y)
         monitor.write(string.rep(" ", x2 - x1 + 1))
@@ -97,17 +97,17 @@ local function flashButton(section)
     drawButtons()
 end
 
+-- Pulse redstone output
 local function pulse(side, duration)
     redstone.setOutput(side, true)
     sleep(duration)
     redstone.setOutput(side, false)
 end
 
+-- Handle button logic
 local function handleButtonPress(name)
     local btn = getButtonByName(name)
-    if not btn then
-        return
-    end
+    if not btn then return end
 
     if locked and name ~= "Lock" then
         print("Panel is locked. No action.")
@@ -132,7 +132,7 @@ local function handleButtonPress(name)
     end
 end
 
--- Initial draw
+-- Draw initial screen
 drawButtons()
 
 print("Touchscreen ready.")
@@ -171,7 +171,7 @@ while true do
         if modemChannel == channel and tostring(message) == "button_pressed" then
             print("Shutdown signal received!")
 
-            -- Custom System Shutdown message (corrected for 39x5 monitor)
+            -- Corrected Centered Shutdown Message
             monitor.setBackgroundColor(colors.black)
             monitor.clear()
             monitor.setTextColor(colors.white)
@@ -186,7 +186,7 @@ while true do
 
             sleep(1)
 
-            -- Full cleanup
+            -- Clear monitor + shutdown
             monitor.setBackgroundColor(colors.black)
             monitor.clear()
             term.setBackgroundColor(colors.black)
