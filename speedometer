@@ -50,71 +50,67 @@ local function drawCircle(cx, cy, radius, isConnected)
     drawPoint(cx - radius + 1, cy, "R", colors.yellow) -- Left = 180°
 end
 
--- Draw dial with working hand movement
-local function drawDial(cx, cy, radius, speed, isConnected)
-    -- Draw dial circle and key points
-    drawCircle(cx, cy, radius, isConnected)
-    
-    -- Draw the dial hand (only if connected)
-    if isConnected then
-        -- Calculate angle based on speed directly
-        local maxSpeed = 100 -- max speed for full deflection
-        if speed > maxSpeed then speed = maxSpeed end
-        if speed < -maxSpeed then speed = -maxSpeed end
-        
-        -- Angle calculation - COMPLETELY REVISED
-        -- For our setup: 
-        -- - Negative speed = Forward = dial points to F (right side, 0°)
-        -- - Positive speed = Reverse = dial points to R (left side, 180°)
-        -- - Zero speed = dial points to 0 (top, 270°)
-        
-        local angle
-        if speed == 0 then
-            angle = 270 -- pointing up at zero
-        elseif speed < 0 then
-            -- Forward (negative speed): angle between 270° (up) and 0° (right)
-            -- Map -1 to -100 to angle 270° to 0°
-            -- More negative = more toward 0° (F)
-            angle = 270 - ((-speed)/maxSpeed * 270) -- Negative speed, more negative means more towards 0°
-            if angle < 0 then angle = angle + 360 end -- Keep angle in 0-360 range
-        else
-            -- Reverse (positive speed): angle between 270° (up) and 180° (left)
-            -- Map 1 to 100 to angle 270° to 180°
-            -- More positive = more towards 180° (R)
-            angle = 270 + ((speed)/maxSpeed * 270) -- Positive speed, more positive means more towards 180°
-            if angle >= 360 then angle = angle - 360 end -- Keep angle within 0-360 range
-        end
-        
-        -- Convert to radians
-        local rad = math.rad(angle)
-        
-        -- Draw needle from center outward
-        local needleLength = radius - 2
-        
-        -- Draw multiple points to make a thicker hand
-        for i = 1, needleLength do
-            local handX = cx + math.cos(rad) * i
-            local handY = cy + math.sin(rad) * i
-            
-            if i == needleLength then
-                -- Needle tip
-                drawPoint(handX, handY, "@", colors.red)
-            elseif i > needleLength * 0.7 then
-                -- Needle shaft near tip
-                drawPoint(handX, handY, "|", colors.orange)
-            else
-                -- Needle base
-                drawPoint(handX, handY, "|", colors.white)
-            end
-        end
-        
-        -- Draw center hub
-        drawPoint(cx, cy, "+", colors.cyan)
+-- Store the current angle for animation
+local currentAngle = 270 -- Start at zero speed (top of the dial)
+
+-- Animate the dial movement
+local function animateDial(cx, cy, radius, speed, isConnected)
+    -- Calculate the target angle based on the speed
+    local targetAngle
+    if speed == 0 then
+        targetAngle = 270 -- pointing up at zero
+    elseif speed < 0 then
+        -- Forward (negative speed): angle between 270° (up) and 0° (right)
+        targetAngle = 270 - ((-speed)/100 * 270) -- Negative speed, more negative means more towards 0°
+        if targetAngle < 0 then targetAngle = targetAngle + 360 end -- Keep angle in 0-360 range
     else
-        -- If not connected, just draw an X in the center
-        drawPoint(cx, cy, "X", colors.red)
+        -- Reverse (positive speed): angle between 270° (up) and 180° (left)
+        targetAngle = 270 + ((speed)/100 * 270) -- Positive speed, more positive means more towards 180°
+        if targetAngle >= 360 then targetAngle = targetAngle - 360 end -- Keep angle within 0-360 range
     end
-    
+
+    -- Smooth transition between current angle and target angle
+    local angleDifference = targetAngle - currentAngle
+    if angleDifference > 180 then
+        angleDifference = angleDifference - 360 -- Adjust for shortest angle path
+    elseif angleDifference < -180 then
+        angleDifference = angleDifference + 360 -- Adjust for shortest angle path
+    end
+
+    -- Update current angle gradually
+    local increment = angleDifference * 0.1 -- Adjust the value to control animation speed
+    currentAngle = currentAngle + increment
+
+    -- Ensure the angle stays within the 0-360 range
+    if currentAngle < 0 then currentAngle = currentAngle + 360 end
+    if currentAngle >= 360 then currentAngle = currentAngle - 360 end
+
+    -- Convert to radians
+    local rad = math.rad(currentAngle)
+
+    -- Draw needle from center outward
+    local needleLength = radius - 2
+
+    -- Draw multiple points to make a thicker hand
+    for i = 1, needleLength do
+        local handX = cx + math.cos(rad) * i
+        local handY = cy + math.sin(rad) * i
+
+        if i == needleLength then
+            -- Needle tip
+            drawPoint(handX, handY, "@", colors.red)
+        elseif i > needleLength * 0.7 then
+            -- Needle shaft near tip
+            drawPoint(handX, handY, "|", colors.orange)
+        else
+            -- Needle base
+            drawPoint(handX, handY, "|", colors.white)
+        end
+    end
+
+    -- Draw center hub
+    drawPoint(cx, cy, "+", colors.cyan)
+
     -- Draw speed values at bottom (absolute value)
     local speedText = isConnected and tostring(math.abs(math.floor(speed))) or "N/A"
     local direction = ""
@@ -126,12 +122,12 @@ local function drawDial(cx, cy, radius, speed, isConnected)
             direction = "R" -- Reverse
         end
     end
-    
+
     -- Display speed and direction
     monitor.setCursorPos(cx - #speedText/2, cy + radius + 1)
     monitor.setTextColor(colors.white)
     monitor.write(speedText)
-    
+
     if direction ~= "" then
         monitor.setCursorPos(cx + #speedText/2 + 1, cy + radius + 1)
         monitor.setTextColor(speed < 0 and colors.lime or colors.red)
@@ -183,11 +179,11 @@ while true do
         -- Debug: Print speeds to console
         print("Left speed: " .. leftSpeed .. ", Right speed: " .. rightSpeed)
         
-        -- Draw left dial
-        drawDial(10, 8, 7, leftSpeed, leftTrack ~= nil)
+        -- Draw left dial with animation
+        animateDial(10, 8, 7, leftSpeed, leftTrack ~= nil)
         
-        -- Draw right dial
-        drawDial(30, 8, 7, rightSpeed, rightTrack ~= nil)
+        -- Draw right dial with animation
+        animateDial(30, 8, 7, rightSpeed, rightTrack ~= nil)
         
         -- Connection status
         monitor.setCursorPos(1, 1)
