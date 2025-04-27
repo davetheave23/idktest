@@ -1,4 +1,4 @@
--- Train Touchscreen Panel 1x4 Monitor, Toggleable Buttons, Flashing Touch, Smoke Pulse, Lock Feature
+-- Train Touchscreen Panel - Proper Monitor Size Detection, Vertical Centered Text, Soft Gray Flash
 
 local monitorName = "front" -- Adjust if needed
 local monitor = peripheral.wrap(monitorName)
@@ -11,10 +11,7 @@ end
 monitor.setTextScale(1) -- Big text
 local monitorWidth, monitorHeight = monitor.getSize()
 
--- Check monitor size
-if monitorWidth ~= 4 or monitorHeight ~= 1 then
-    print("Warning: Monitor is not 1x4 size! Current size: "..monitorWidth.."x"..monitorHeight)
-end
+print("Monitor size detected: "..monitorWidth.."x"..monitorHeight)
 
 -- Define button sections and sides
 local buttons = {
@@ -50,11 +47,12 @@ local function drawButtons()
 
         local labelLength = #btn.name
         local labelX = math.floor((x1 + x2) / 2) - math.floor(labelLength / 2)
-        local labelY = 1 -- Always 1 because screen is 1 tall
+
+        -- Proper vertical centering (use about row 3 for big screens)
+        local labelY = math.floor(monitorHeight / 2)
 
         monitor.setCursorPos(labelX, labelY)
 
-        -- Color logic
         if locked and btn.name ~= "Lock" then
             monitor.setTextColor(colors.red)
         elseif (btn.toggle and btn.active) or (btn.name == "Smoke" and btn.active) or (btn.name == "Lock" and locked) then
@@ -77,16 +75,16 @@ local function getButtonByName(name)
     return nil
 end
 
--- Helper: Flash button when pressed
+-- Helper: Flash button when pressed (SOFTER flash now)
 local function flashButton(section)
     -- Calculate section bounds
     local sectionWidth = monitorWidth / 4
     local x1 = (section - 1) * sectionWidth + 1
     local x2 = section * sectionWidth
 
-    monitor.setBackgroundColor(colors.white)
+    monitor.setBackgroundColor(colors.gray) -- <<< Softer flash color!
 
-    -- Fill background of the touched section white
+    -- Fill background of the touched section
     for y = 1, monitorHeight do
         monitor.setCursorPos(x1, y)
         monitor.write(string.rep(" ", x2 - x1 + 1))
@@ -149,7 +147,7 @@ while true do
 
         for _, btn in ipairs(buttons) do
             if btn.section == section then
-                flashButton(btn.section) -- Flash when touched
+                flashButton(btn.section)
                 handleButtonPress(btn.name)
                 drawButtons()
                 break
