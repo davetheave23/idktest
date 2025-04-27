@@ -1,4 +1,4 @@
--- Advanced Touchscreen Train Panel with Lock Feature
+-- Advanced Touchscreen Train Panel for 1x4 Monitor with Dividers and Full Words
 
 local monitorName = "front" -- Adjust if needed
 local monitor = peripheral.wrap(monitorName)
@@ -8,48 +8,44 @@ if not monitor then
     return
 end
 
-monitor.setTextScale(1)
+monitor.setTextScale(0.5) -- <<< Set text scale smaller so full words fit
 local monitorWidth, monitorHeight = monitor.getSize()
+
+-- Check monitor size
+if monitorWidth ~= 4 or monitorHeight ~= 1 then
+    print("Warning: Monitor is not 1x4 size! Current size: "..monitorWidth.."x"..monitorHeight)
+end
 
 -- Define button sections
 local buttons = {
-    {name = "Hatch", section = 1, color = colors.white},
-    {name = "Lights", section = 2, color = colors.white},
-    {name = "Smoke", section = 3, color = colors.white},
-    {name = "Lock", section = 4, color = colors.white},
+    {name = "Hatch", section = 1},
+    {name = "Lights", section = 2},
+    {name = "Smoke", section = 3},
+    {name = "Lock", section = 4},
 }
 
 local locked = false -- Lock state
-
--- Helper: Get section boundaries
-local function getSectionBounds(section)
-    local sectionWidth = math.floor(monitorWidth / 4)
-    local x1 = (section - 1) * sectionWidth + 1
-    local x2 = section * sectionWidth
-    return x1, x2
-end
 
 -- Helper: Draw all buttons and dividers
 local function drawButtons()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
 
-    -- Draw vertical dividers
+    -- Draw divider bars
     monitor.setTextColor(colors.white)
-    local sectionWidth = math.floor(monitorWidth / 4)
-    for i = 1, 3 do
-        local dividerX = i * sectionWidth + 1
-        for y = 1, monitorHeight do
-            monitor.setCursorPos(dividerX, y)
-            monitor.write("|")
-        end
+    for x = 2, monitorWidth do
+        monitor.setCursorPos(x, 1)
+        monitor.write("|")
     end
 
-    -- Draw button labels
+    -- Draw button labels (full words)
     for _, btn in ipairs(buttons) do
-        local x1, x2 = getSectionBounds(btn.section)
-        local labelX = math.floor((x1 + x2) / 2) - math.floor(#btn.name / 2)
-        local labelY = math.floor(monitorHeight / 2)
+        local x1 = (btn.section - 1) * (monitorWidth / 4) + 1
+        local x2 = btn.section * (monitorWidth / 4)
+        local labelLength = #btn.name
+        local labelX = math.floor((x1 + x2) / 2) - math.floor(labelLength / 2)
+        local labelY = 1
+
         monitor.setCursorPos(labelX, labelY)
 
         if locked and btn.name ~= "Lock" then
@@ -62,9 +58,9 @@ local function drawButtons()
     end
 end
 
--- Helper: Check which button was touched
+-- Helper: Get button based on touch coordinates
 local function getButtonAt(x, y)
-    local sectionWidth = math.floor(monitorWidth / 4)
+    local sectionWidth = monitorWidth / 4
     local section = math.ceil(x / sectionWidth)
     for _, btn in ipairs(buttons) do
         if btn.section == section then
