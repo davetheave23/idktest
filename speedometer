@@ -1,26 +1,22 @@
-print("Speedometer: Starting up...")
+-- Animated Dual Speedometer
 
-local monitorName = "top" -- CHANGE if needed
+local monitorName = "top" -- Change if needed
 local leftTrackName = "back"
 local rightTrackName = "bottom"
-local inputSide = "right"
 
-print("Wrapping peripherals...")
 local monitor = peripheral.wrap(monitorName)
 local leftTrack = peripheral.wrap(leftTrackName)
 local rightTrack = peripheral.wrap(rightTrackName)
 
 if not monitor then
-    print("ERROR: Monitor not found on side: "..monitorName)
+    print("ERROR: Monitor not found on side: " .. monitorName)
     return
 end
 
-print("Monitor found on side: "..monitorName)
-
 monitor.setTextScale(0.5)
 local monitorWidth, monitorHeight = monitor.getSize()
-print("Monitor size: "..monitorWidth.."x"..monitorHeight)
 
+-- Helper Functions
 local function clearMonitor()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
@@ -41,7 +37,6 @@ local function drawCircle(cx, cy, radius, isConnected)
         local y = cy + math.sin(rad) * radius
         drawPoint(x, y, "*", isConnected and colors.lime or colors.red)
     end
-
     drawPoint(cx, cy - radius + 1, "0", colors.yellow)
     drawPoint(cx + radius - 1, cy, "F", colors.yellow)
     drawPoint(cx - radius + 1, cy, "R", colors.yellow)
@@ -53,11 +48,9 @@ local function drawDial(cx, cy, radius, angle, speed, isConnected)
     if isConnected then
         local rad = math.rad(angle)
         local needleLength = radius - 2
-
         for i = 1, needleLength do
             local handX = cx + math.cos(rad) * i
             local handY = cy + math.sin(rad) * i
-
             if i == needleLength then
                 drawPoint(handX, handY, "@", colors.red)
             elseif i > needleLength * 0.7 then
@@ -66,45 +59,38 @@ local function drawDial(cx, cy, radius, angle, speed, isConnected)
                 drawPoint(handX, handY, "|", colors.white)
             end
         end
-
         drawPoint(cx, cy, "+", colors.cyan)
     else
         drawPoint(cx, cy, "X", colors.red)
     end
 
+    -- Draw speed number
     local speedText = isConnected and tostring(math.abs(math.floor(speed))) or "N/A"
     local direction = ""
     if isConnected then
-        if speed < 0 then  
+        if speed < 0 then
             direction = "F"
         elseif speed > 0 then
             direction = "R"
         end
     end
 
-    monitor.setCursorPos(cx - #speedText/2, cy + radius + 1)
+    monitor.setCursorPos(math.floor(cx - #speedText / 2), cy + radius + 1)
     monitor.setTextColor(colors.white)
     monitor.write(speedText)
 
     if direction ~= "" then
-        monitor.setCursorPos(cx + #speedText/2 + 1, cy + radius + 1)
+        monitor.setCursorPos(math.floor(cx + #speedText / 2 + 1), cy + radius + 1)
         monitor.setTextColor(speed < 0 and colors.lime or colors.red)
         monitor.write(direction)
     end
 end
 
 local function getRawSpeed(track, lineNum)
-    if not track then
-        print("WARNING: No track found for line "..lineNum)
-        return 0
-    end
+    if not track then return 0 end
 
     local success, data = pcall(function() return track.getLine(lineNum) end)
-
-    if not success then
-        print("WARNING: Failed to get line "..lineNum)
-        return 0
-    end
+    if not success then return 0 end
 
     local rawSpeed = 0
 
@@ -156,53 +142,36 @@ local function moveAngleTowards(current, target, step)
     end
 end
 
+-- Initial values
 local displayedLeftAngle = 270
 local displayedRightAngle = 270
 local displayedLeftSpeed = 0
 local displayedRightSpeed = 0
 
-print("Speedometer main loop starting...")
+-- Main Loop
+print("Speedometer started. Press Ctrl+T to terminate manually.")
 
 while true do
-    local event = os.pullEvent()
+    clearMonitor()
 
-    if event == "shutdown_speedometer" then
-        print("Received shutdown event, exiting speedometer...")
-        clearMonitor()
-        monitor.setBackgroundColor(colors.black)
-        monitor.clear()
-        term.setBackgroundColor(colors.black)
-        term.clear()
-        term.setCursorPos(1, 1)
-        break
-    else
-        if not inputSide or redstone.getInput(inputSide) then
-            clearMonitor()
+    local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
+    local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
 
-            local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
-            local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
+    local targetLeftAngle = speedToAngle(leftSpeed)
+    local targetRightAngle = speedToAngle(rightSpeed)
 
-            local targetLeftAngle = speedToAngle(leftSpeed)
-            local targetRightAngle = speedToAngle(rightSpeed)
+    displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5)
+    displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
 
-            displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5)
-            displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
+    displayedLeftSpeed = leftSpeed
+    displayedRightSpeed = rightSpeed
 
-            displayedLeftSpeed = leftSpeed
-            displayedRightSpeed = rightSpeed
+    drawDial(10, 8, 7, displayedLeftAngle, displayedLeftSpeed, leftTrack ~= nil)
+    drawDial(30, 8, 7, displayedRightAngle, displayedRightSpeed, rightTrack ~= nil)
 
-            drawDial(10, 8, 7, displayedLeftAngle, displayedLeftSpeed, leftTrack ~= nil)
-            drawDial(30, 8, 7, displayedRightAngle, displayedRightSpeed, rightTrack ~= nil)
-
-            monitor.setCursorPos(1, 1)
-            monitor.setTextColor(colors.yellow)
-            monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
-        else
-            clearMonitor()
-        end
-    end
+    monitor.setCursorPos(1, 1)
+    monitor.setTextColor(colors.yellow)
+    monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
 
     sleep(0.1)
 end
-
-print("Speedometer: Fully shut down.")
