@@ -1,4 +1,4 @@
-local modem = peripheral.wrap("right") -- or whichever side
+local modem = peripheral.wrap("right")
 local channel = 1
 
 if not modem then
@@ -9,8 +9,10 @@ end
 modem.open(channel)
 
 local speedometerRunning = false
+local speedometerActive = false
 
-local function listenForButton()
+-- Listen for wireless button
+local function runReceiver()
     while true do
         local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
         if senderChannel == channel and message == "button_pressed" then
@@ -19,15 +21,32 @@ local function listenForButton()
     end
 end
 
+-- Manage toggling speedometer state
 local function manageSpeedometer()
     while true do
         local event = os.pullEvent("toggle_speedometer")
-        if speedometerRunning then
+
+        speedometerRunning = not speedometerRunning
+    end
+end
+
+-- Actually launch / shutdown speedometer
+local function runSpeedometer()
+    while true do
+        if speedometerRunning and not speedometerActive then
+            -- start it
+            speedometerActive = true
+            shell.run("animatedspeedometer.lua")
+            -- when animatedspeedometer exits, set active false
+            speedometerActive = false
+        elseif not speedometerRunning and speedometerActive then
+            -- ask it to shutdown
             os.queueEvent("shutdown_speedometer")
+            sleep(0.5) -- Give it a tiny bit to finish
         else
-            os.queueEvent("start_speedometer")
+            sleep(0.1) -- nothing to do
         end
     end
 end
 
-parallel.waitForAny(listenForButton, manageSpeedometer)
+parallel.waitForAny(runReceiver, manageSpeedometer, runSpeedometer)
