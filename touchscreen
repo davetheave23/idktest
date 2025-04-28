@@ -1,1 +1,195 @@
+-- Train Touchscreen Panel - Instant Start + Wireless Shutdown + Correct Centered Message fixed
 
+local monitorName = "front" -- Monitor side
+local modemSide = "bottom"  -- Wireless modem side
+local channel = 1           -- Wireless channel to listen on
+
+-- Wrap peripherals
+local monitor = peripheral.wrap(monitorName)
+local modem = peripheral.wrap(modemSide)
+
+if not monitor or not modem then
+    print("Monitor or modem not found!")
+    return
+end
+
+modem.open(channel) -- Open modem for direct messages
+
+monitor.setTextScale(1) -- Big text
+local monitorWidth, monitorHeight = monitor.getSize()
+
+print("Monitor size detected: "..monitorWidth.."x"..monitorHeight)
+
+-- Button setup
+local buttons = {
+    {name = "Hatch", section = 1, side = "back", toggle = true, active = false},
+    {name = "Lights", section = 2, side = "left", toggle = true, active = false},
+    {name = "Smoke", section = 3, side = "right", toggle = false, active = false},
+    {name = "Lock", section = 4, toggle = false, active = false},
+}
+
+local locked = false
+local smokeTimer = nil
+local poweredOn = true -- Start active
+
+-- Drawing function
+local function drawButtons()
+    monitor.setBackgroundColor(colors.black)
+    monitor.clear()
+    monitor.setTextColor(colors.white)
+
+    -- Dividers
+    for i = 1, 3 do
+        local dividerX = math.floor((i * monitorWidth) / 4) + 1
+        for y = 1, monitorHeight do
+            monitor.setCursorPos(dividerX, y)
+            monitor.write("|")
+        end
+    end
+
+    -- Button labels
+    for _, btn in ipairs(buttons) do
+        local sectionWidth = monitorWidth / 4
+        local x1 = (btn.section - 1) * sectionWidth + 1
+        local x2 = btn.section * sectionWidth
+        local labelLength = #btn.name
+        local labelX = math.floor((x1 + x2) / 2) - math.floor(labelLength / 2)
+        local labelY = math.floor(monitorHeight / 2) + 1
+
+        monitor.setCursorPos(labelX, labelY)
+
+        if locked and btn.name ~= "Lock" then
+            monitor.setTextColor(colors.red)
+        elseif (btn.toggle and btn.active) or (btn.name == "Smoke" and btn.active) or (btn.name == "Lock" and locked) then
+            monitor.setTextColor(colors.lime)
+        else
+            monitor.setTextColor(colors.white)
+        end
+
+        monitor.write(btn.name)
+    end
+end
+
+-- Find a button by name
+local function getButtonByName(name)
+    for _, btn in ipairs(buttons) do
+        if btn.name == name then
+            return btn
+        end
+    end
+    return nil
+end
+
+-- Flash button when touched
+local function flashButton(section)
+    if not poweredOn then return end
+    local sectionWidth = monitorWidth / 4
+    local x1 = (section - 1) * sectionWidth + 1
+    local x2 = section * sectionWidth
+
+    monitor.setBackgroundColor(colors.gray)
+    for y = 1, monitorHeight do
+        monitor.setCursorPos(x1, y)
+        monitor.write(string.rep(" ", x2 - x1 + 1))
+    end
+
+    sleep(0.15)
+    drawButtons()
+end
+
+-- Pulse redstone output
+local function pulse(side, duration)
+    redstone.setOutput(side, true)
+    sleep(duration)
+    redstone.setOutput(side, false)
+end
+
+-- Handle button logic
+local function handleButtonPress(name)
+    local btn = getButtonByName(name)
+    if not btn then return end
+
+    if locked and name ~= "Lock" then
+        print("Panel is locked. No action.")
+        return
+    end
+
+    if name == "Lock" then
+        locked = not locked
+        print(locked and "Panel locked" or "Panel unlocked")
+    elseif btn.toggle then
+        btn.active = not btn.active
+        redstone.setOutput(btn.side, btn.active)
+        print(btn.name.." "..(btn.active and "Activated" or "Deactivated"))
+    elseif name == "Smoke" then
+        if not btn.active then
+            btn.active = true
+            redstone.setOutput(btn.side, true)
+            drawButtons()
+            smokeTimer = os.startTimer(3)
+            print("Smoke activated for 3 seconds")
+        end
+    end
+end
+
+-- Draw initial screen
+drawButtons()
+
+print("Touchscreen ready.")
+
+-- Main event loop
+while true do
+    local event, p1, p2, p3, p4, p5 = os.pullEvent()
+
+    if event == "monitor_touch" then
+        local side, x, y = p1, p2, p3
+        local sectionWidth = monitorWidth / 4
+        local section = math.ceil(x / sectionWidth)
+
+        for _, btn in ipairs(buttons) do
+            if btn.section == section then
+                flashButton(btn.section)
+                handleButtonPress(btn.name)
+                drawButtons()
+                break
+            end
+        end
+
+    elseif event == "timer" and p1 == smokeTimer then
+        local smokeBtn = getButtonByName("Smoke")
+        if smokeBtn then
+            smokeBtn.active = false
+        end
+        redstone.setOutput("right", false)
+        smokeTimer = nil
+        drawButtons()
+        print("Smoke deactivated")
+
+    elseif event == "shutdown_finalscreen" then
+        print("Shutdown signal received!")
+
+        -- Corrected Centered and Shifted Shutdown Message
+        monitor.setBackgroundColor(colors.black)
+        monitor.clear()
+        monitor.setTextColor(colors.white)
+        
+        -- First line (System)
+        monitor.setCursorPos(5, 2)
+        monitor.write("==          System          ==")
+        
+        -- Second line (Shutdown) â evenly spaced fixed
+        monitor.setCursorPos(5, 4)
+        monitor.write("==         Shutdown         ==")
+        
+        sleep(1)
+        
+        -- Full cleanup
+        monitor.setBackgroundColor(colors.black)
+        monitor.clear()
+        term.setBackgroundColor(colors.black)
+        term.clear()
+        term.setCursorPos(1, 1)
+        
+        break -- EXIT only finalscreen.lua, not the whole computer
+    end
+end
