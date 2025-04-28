@@ -1,15 +1,13 @@
 local modem = peripheral.wrap("right")
 local channel = 1
-
 if not modem then
     print("No modem found!")
     return
 end
-
 modem.open(channel)
-
 local speedometerRunning = false
 local speedometerActive = false
+local speedometerPID = nil
 
 -- Listen for wireless button
 local function runReceiver()
@@ -25,28 +23,34 @@ end
 local function manageSpeedometer()
     while true do
         local event = os.pullEvent("toggle_speedometer")
-
         speedometerRunning = not speedometerRunning
-    end
-end
-
--- Actually launch / shutdown speedometer
-local function runSpeedometer()
-    while true do
+        
         if speedometerRunning and not speedometerActive then
-            -- start it
+            -- Start speedometer in parallel
             speedometerActive = true
-            shell.run("animatedspeedometer.lua")
-            -- when animatedspeedometer exits, set active false
-            speedometerActive = false
+            speedometerPID = shell.openTab("animatedspeedometer.lua")
         elseif not speedometerRunning and speedometerActive then
-            -- ask it to shutdown
-            os.queueEvent("shutdown_speedometer")
-            sleep(0.5) -- Give it a tiny bit to finish
-        else
-            sleep(0.1) -- nothing to do
+            -- Terminate the speedometer program
+            if speedometerPID then
+                multishell.terminate(speedometerPID)
+                speedometerPID = nil
+            end
+            speedometerActive = false
         end
     end
 end
 
-parallel.waitForAny(runReceiver, manageSpeedometer, runSpeedometer)
+-- Monitor tab status
+local function monitorTabs()
+    while true do
+        sleep(1)
+        -- Check if our speedometer tab was manually closed
+        if speedometerActive and speedometerPID and not multishell.getTitle(speedometerPID) then
+            speedometerActive = false
+            speedometerPID = nil
+            speedometerRunning = false
+        end
+    end
+end
+
+parallel.waitForAny(runReceiver, manageSpeedometer, monitorTabs)
