@@ -13,6 +13,25 @@ if not monitor then
     return
 end
 
+-- Function to check if we should continue running
+local function shouldContinueRunning()
+    if not fs.exists("speedometer_state") then
+        return false
+    end
+    
+    local file = fs.open("speedometer_state", "r")
+    local state = file.readAll()
+    file.close()
+    
+    return state == "running"
+end
+
+-- If we're not supposed to be running, exit immediately
+if not shouldContinueRunning() then
+    print("Speedometer start canceled - state is not running")
+    return
+end
+
 monitor.setTextScale(0.5)
 local monitorWidth, monitorHeight = monitor.getSize()
 
@@ -131,51 +150,36 @@ end
 local displayedLeftAngle = 270
 local displayedRightAngle = 270
 
--- Control flag
-local running = true
-
 -- Main speedometer updating loop
-local function updateLoop()
-    while running do
+while true do
+    -- Check if we should continue running
+    if not shouldContinueRunning() then
+        -- Clean up and exit
         clearMonitor()
-
-        local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
-        local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
-
-        local targetLeftAngle = speedToAngle(leftSpeed)
-        local targetRightAngle = speedToAngle(rightSpeed)
-
-        displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5)
-        displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
-
-        drawDial(10, 8, 7, displayedLeftAngle, leftSpeed, leftTrack ~= nil)
-        drawDial(30, 8, 7, displayedRightAngle, rightSpeed, rightTrack ~= nil)
-
-        monitor.setCursorPos(1, 1)
-        monitor.setTextColor(colors.yellow)
-        monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
-
-        sleep(0.1)
+        term.setBackgroundColor(colors.black)
+        term.clear()
+        term.setCursorPos(1, 1)
+        print("Speedometer shutdown complete.")
+        return -- Exit program
     end
+
+    clearMonitor()
+
+    local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
+    local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
+
+    local targetLeftAngle = speedToAngle(leftSpeed)
+    local targetRightAngle = speedToAngle(rightSpeed)
+
+    displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5)
+    displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
+
+    drawDial(10, 8, 7, displayedLeftAngle, leftSpeed, leftTrack ~= nil)
+    drawDial(30, 8, 7, displayedRightAngle, rightSpeed, rightTrack ~= nil)
+
+    monitor.setCursorPos(1, 1)
+    monitor.setTextColor(colors.yellow)
+    monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
+
+    sleep(0.1)
 end
-
--- Shutdown listening loop
-local function shutdownListener()
-    while true do
-        local event = os.pullEvent("shutdown_speedometer")
-        if event == "shutdown_speedometer" then
-            running = false
-            break
-        end
-    end
-end
-
--- Run both loops at once
-parallel.waitForAny(updateLoop, shutdownListener)
-
--- After shutdown
-clearMonitor()
-term.setBackgroundColor(colors.black)
-term.clear()
-term.setCursorPos(1, 1)
-print("Speedometer shutdown complete.")
