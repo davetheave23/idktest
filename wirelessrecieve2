@@ -7,7 +7,16 @@ end
 modem.open(channel)
 local speedometerRunning = false
 local speedometerActive = false
-local speedometerPID = nil
+
+-- Create a shared file to communicate with animatedspeedometer.lua
+local function writeControlFile(state)
+    local file = fs.open("speedometer_control", "w")
+    file.write(state)
+    file.close()
+end
+
+-- Initialize control file
+writeControlFile("run")
 
 -- Listen for wireless button
 local function runReceiver()
@@ -26,31 +35,18 @@ local function manageSpeedometer()
         speedometerRunning = not speedometerRunning
         
         if speedometerRunning and not speedometerActive then
-            -- Start speedometer in parallel
+            -- Mark as active and launch the speedometer
             speedometerActive = true
-            speedometerPID = shell.openTab("animatedspeedometer.lua")
+            -- Signal the speedometer to run
+            writeControlFile("run")
+            -- Launch the speedometer in a separate process
+            shell.run("bg", "animatedspeedometer.lua")
         elseif not speedometerRunning and speedometerActive then
-            -- Terminate the speedometer program
-            if speedometerPID then
-                multishell.terminate(speedometerPID)
-                speedometerPID = nil
-            end
+            -- Signal the speedometer to stop
+            writeControlFile("stop")
             speedometerActive = false
         end
     end
 end
 
--- Monitor tab status
-local function monitorTabs()
-    while true do
-        sleep(1)
-        -- Check if our speedometer tab was manually closed
-        if speedometerActive and speedometerPID and not multishell.getTitle(speedometerPID) then
-            speedometerActive = false
-            speedometerPID = nil
-            speedometerRunning = false
-        end
-    end
-end
-
-parallel.waitForAny(runReceiver, manageSpeedometer, monitorTabs)
+parallel.waitForAny(runReceiver, manageSpeedometer)
