@@ -1,6 +1,6 @@
 -- Wireless Receiver to Control Animated Speedometer Properly
 
-local modem = peripheral.wrap("right") -- or change to your modem side
+local modem = peripheral.wrap("right")
 local channel = 1
 
 if not modem then
