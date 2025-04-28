@@ -1,6 +1,6 @@
--- Wireless Receiver to Control Speedometer
+-- Wireless Receiver to Control Animated Speedometer Properly
 
-local modem = peripheral.wrap("right") -- Your modem side
+local modem = peripheral.wrap("right") -- or change to your modem side
 local channel = 1
 
 if not modem then
@@ -13,11 +13,10 @@ modem.open(channel)
 local speedometerRunning = false
 local speedometerThread = nil
 
--- Receiver
+-- Receiver for wireless button presses
 local function runReceiver()
     while true do
         local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
-
         if senderChannel == channel and message == "button_pressed" then
             if not speedometerRunning then
                 print("Starting Speedometer...")
@@ -30,19 +29,18 @@ local function runReceiver()
     end
 end
 
--- Manager
+-- Manager for starting/stopping the speedometer coroutine
 local function runSpeedometerManager()
     while true do
         local event = os.pullEvent()
 
         if event == "start_speedometer" and not speedometerRunning then
-            speedometerRunning = true
             local speedometerFunc = loadfile("animatedspeedometer.lua")
-            if not speedometerFunc then
-                print("Error loading animatedspeedometer.lua")
-                speedometerRunning = false
-            else
+            if speedometerFunc then
                 speedometerThread = coroutine.create(speedometerFunc)
+                speedometerRunning = true
+            else
+                print("Failed to load animatedspeedometer.lua")
             end
         elseif event == "shutdown_speedometer" and speedometerRunning then
             os.queueEvent("shutdown_speedometer")
@@ -50,18 +48,20 @@ local function runSpeedometerManager()
     end
 end
 
--- Ticking the speedometer coroutine
+-- Proper event passing to the speedometer coroutine
 local function runSpeedometerTick()
     while true do
         if speedometerThread and coroutine.status(speedometerThread) ~= "dead" then
-            local ok, err = coroutine.resume(speedometerThread)
+            local event, p1, p2, p3, p4, p5 = os.pullEventRaw()
+            local ok, err = coroutine.resume(speedometerThread, event, p1, p2, p3, p4, p5)
             if not ok then
-                print("Speedometer crashed:", err)
+                print("Speedometer error:", err)
                 speedometerRunning = false
                 speedometerThread = nil
             end
+        else
+            sleep(0.05) -- avoid busy looping
         end
-        sleep(0.05) -- Resume every 0.05 seconds
     end
 end
 
