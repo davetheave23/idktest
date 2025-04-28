@@ -6,45 +6,39 @@ if not modem then
 end
 modem.open(channel)
 
--- Create a flag file to indicate if the speedometer should be running
-local function setSpeedometerFlag(state)
-    local file = fs.open("speedometer_flag", "w")
-    file.write(state and "1" or "0")
+-- Create a state file to control the speedometer
+local function setSpeedometerState(running)
+    local file = fs.open("speedometer_state", "w")
+    file.write(running and "running" or "stopped")
     file.close()
 end
 
--- Get the current flag state
-local function getSpeedometerFlag()
-    if not fs.exists("speedometer_flag") then
-        setSpeedometerFlag(false)
-        return false
-    end
-    
-    local file = fs.open("speedometer_flag", "r")
-    local state = file.readAll() == "1"
-    file.close()
-    return state
-end
+-- Initialize to stopped state
+setSpeedometerState(false)
 
--- Toggle the speedometer flag
-local function toggleSpeedometer()
-    local currentState = getSpeedometerFlag()
-    setSpeedometerFlag(not currentState)
-    
-    if not currentState then
-        -- Starting the speedometer
-        print("Starting speedometer...")
-        shell.run("animatedspeedometer.lua")
-        -- When speedometer exits, reset the flag
-        setSpeedometerFlag(false)
-        print("Speedometer stopped.")
-    end
-end
-
--- Main receiver
+-- Main loop to handle button presses
 while true do
     local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
+    
     if senderChannel == channel and message == "button_pressed" then
-        toggleSpeedometer()
+        -- Read current state
+        local file = fs.open("speedometer_state", "r")
+        local currentState = file.readAll()
+        file.close()
+        
+        if currentState == "stopped" then
+            -- Start the speedometer
+            print("Starting speedometer...")
+            setSpeedometerState(true)
+            shell.run("animatedspeedometer.lua")
+            -- When speedometer exits, set state to stopped
+            setSpeedometerState(false)
+            print("Speedometer stopped.")
+        else
+            -- Signal the speedometer to stop
+            print("Stopping speedometer...")
+            setSpeedometerState(false)
+            -- The speedometer will see this and stop itself
+        end
     end
 end
