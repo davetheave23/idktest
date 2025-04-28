@@ -1,4 +1,4 @@
--- Animated Dual Speedometer - Original Simple Version
+-- Animated Dual Speedometer
 
 local monitorName = "top" -- Change if needed
 local leftTrackName = "back"
