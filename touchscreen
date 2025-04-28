@@ -1,7 +1,7 @@
--- Animated Dual Speedometer - Final Clean Version
+-- Animated Dual Speedometer - FINAL Version
 
 -- Settings
-local monitorName = "top" -- <<< CHANGE if needed
+local monitorName = "top" -- Change if needed
 local leftTrackName = "back"
 local rightTrackName = "bottom"
 
@@ -15,11 +15,10 @@ local rightTrack = peripheral.wrap(rightTrackName)
 
 if not monitor then
     term.redirect(originalTerm)
-    print("ERROR: Monitor not found on side: " .. monitorName)
+    print("ERROR: Monitor not found!")
     return
 end
 
--- Redirect output to monitor
 term.redirect(monitor)
 monitor.setTextScale(0.5)
 local monitorWidth, monitorHeight = monitor.getSize()
@@ -150,7 +149,7 @@ local function moveAngleTowards(current, target, step)
     end
 end
 
--- Initial values
+-- Initial Values
 local displayedLeftAngle = 270
 local displayedRightAngle = 270
 local displayedLeftSpeed = 0
@@ -159,42 +158,51 @@ local displayedRightSpeed = 0
 -- Clear monitor at start
 clearMonitor()
 
--- Main loop
-while true do
-    local event = os.pullEvent()
+-- Main Loop
+local shutdown = false
 
-    if event == "shutdown_speedometer" then
-        -- Clean shutdown
-        clearMonitor()
-        term.redirect(originalTerm)
-        term.setBackgroundColor(colors.black)
-        term.clear()
-        term.setCursorPos(1, 1)
-        print("Speedometer shutdown complete.")
-        break
-    else
-        -- Update dials
-        clearMonitor()
+parallel.waitForAny(
+    function()
+        while not shutdown do
+            clearMonitor()
 
-        local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
-        local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
+            local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
+            local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
 
-        local targetLeftAngle = speedToAngle(leftSpeed)
-        local targetRightAngle = speedToAngle(rightSpeed)
+            local targetLeftAngle = speedToAngle(leftSpeed)
+            local targetRightAngle = speedToAngle(rightSpeed)
 
-        displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5)
-        displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
+            displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5)
+            displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
 
-        displayedLeftSpeed = leftSpeed
-        displayedRightSpeed = rightSpeed
+            displayedLeftSpeed = leftSpeed
+            displayedRightSpeed = rightSpeed
 
-        drawDial(10, 8, 7, displayedLeftAngle, displayedLeftSpeed, leftTrack ~= nil)
-        drawDial(30, 8, 7, displayedRightAngle, displayedRightSpeed, rightTrack ~= nil)
+            drawDial(10, 8, 7, displayedLeftAngle, displayedLeftSpeed, leftTrack ~= nil)
+            drawDial(30, 8, 7, displayedRightAngle, displayedRightSpeed, rightTrack ~= nil)
 
-        monitor.setCursorPos(1, 1)
-        monitor.setTextColor(colors.yellow)
-        monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
+            monitor.setCursorPos(1, 1)
+            monitor.setTextColor(colors.yellow)
+            monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
+
+            sleep(0.1)
+        end
+    end,
+    function()
+        while true do
+            local event = os.pullEvent("shutdown_speedometer")
+            if event == "shutdown_speedometer" then
+                shutdown = true
+                break
+            end
+        end
     end
+)
 
-    sleep(0.1)
-end
+-- Cleanup after shutdown
+clearMonitor()
+term.redirect(originalTerm)
+term.setBackgroundColor(colors.black)
+term.clear()
+term.setCursorPos(1, 1)
+print("Speedometer shutdown complete.")
