@@ -1,6 +1,6 @@
--- Animated Dual Speedometer
+-- Animated Dual Speedometer - FINAL Version (No changes needed here!)
 
-local monitorName = "top" -- Change if needed
+local monitorName = "top" -- Set your monitor side
 local leftTrackName = "back"
 local rightTrackName = "bottom"
 
@@ -9,14 +9,14 @@ local leftTrack = peripheral.wrap(leftTrackName)
 local rightTrack = peripheral.wrap(rightTrackName)
 
 if not monitor then
-    print("ERROR: Monitor not found on side: " .. monitorName)
+    print("ERROR: Monitor not found!")
     return
 end
 
 monitor.setTextScale(0.5)
 local monitorWidth, monitorHeight = monitor.getSize()
 
--- Helper Functions
+-- Helpers
 local function clearMonitor()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
@@ -88,27 +88,18 @@ end
 
 local function getRawSpeed(track, lineNum)
     if not track then return 0 end
-
     local success, data = pcall(function() return track.getLine(lineNum) end)
     if not success then return 0 end
 
-    local rawSpeed = 0
-
-    if type(data) == "table" then
-        if data.text then
-            local speedStr = tostring(data.text):match("-?%d+%.?%d*")
-            rawSpeed = tonumber(speedStr) or 0
-        elseif data.value then
-            rawSpeed = tonumber(data.value) or 0
-        end
+    if type(data) == "table" and data.text then
+        return tonumber(data.text:match("-?%d+%.?%d*")) or 0
     elseif type(data) == "string" then
-        local speedStr = data:match("-?%d+%.?%d*")
-        rawSpeed = tonumber(speedStr) or 0
+        return tonumber(data:match("-?%d+%.?%d*")) or 0
     elseif type(data) == "number" then
-        rawSpeed = data
+        return data
     end
 
-    return rawSpeed
+    return 0
 end
 
 local function speedToAngle(speed)
@@ -119,13 +110,9 @@ local function speedToAngle(speed)
     if speed == 0 then
         return 270
     elseif speed < 0 then
-        local angle = 270 - ((-speed) / maxSpeed * 270)
-        if angle < 0 then angle = angle + 360 end
-        return angle
+        return (270 - ((-speed) / maxSpeed * 270)) % 360
     else
-        local angle = 270 + ((speed) / maxSpeed * 270)
-        if angle >= 360 then angle = angle - 360 end
-        return angle
+        return (270 + (speed / maxSpeed * 270)) % 360
     end
 end
 
@@ -134,44 +121,46 @@ local function moveAngleTowards(current, target, step)
     if diff == 0 then
         return current
     elseif diff <= 180 then
-        local move = math.min(step, diff)
-        return (current + move) % 360
+        return (current + math.min(step, diff)) % 360
     else
-        local move = math.min(step, 360 - diff)
-        return (current - move + 360) % 360
+        return (current - math.min(step, 360 - diff) + 360) % 360
     end
 end
 
 -- Initial values
 local displayedLeftAngle = 270
 local displayedRightAngle = 270
-local displayedLeftSpeed = 0
-local displayedRightSpeed = 0
 
 -- Main Loop
-print("Speedometer started. Press Ctrl+T to terminate manually.")
-
 while true do
-    clearMonitor()
+    local event, p1 = os.pullEvent()
 
-    local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
-    local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
+    if event == "shutdown_speedometer" then
+        clearMonitor()
+        term.setBackgroundColor(colors.black)
+        term.clear()
+        term.setCursorPos(1, 1)
+        print("Speedometer shutdown complete.")
+        break
+    else
+        clearMonitor()
 
-    local targetLeftAngle = speedToAngle(leftSpeed)
-    local targetRightAngle = speedToAngle(rightSpeed)
+        local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
+        local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
 
-    displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5)
-    displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
+        local targetLeftAngle = speedToAngle(leftSpeed)
+        local targetRightAngle = speedToAngle(rightSpeed)
 
-    displayedLeftSpeed = leftSpeed
-    displayedRightSpeed = rightSpeed
+        displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5)
+        displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
 
-    drawDial(10, 8, 7, displayedLeftAngle, displayedLeftSpeed, leftTrack ~= nil)
-    drawDial(30, 8, 7, displayedRightAngle, displayedRightSpeed, rightTrack ~= nil)
+        drawDial(10, 8, 7, displayedLeftAngle, leftSpeed, leftTrack ~= nil)
+        drawDial(30, 8, 7, displayedRightAngle, rightSpeed, rightTrack ~= nil)
 
-    monitor.setCursorPos(1, 1)
-    monitor.setTextColor(colors.yellow)
-    monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
-
-    sleep(0.1)
+        monitor.setCursorPos(1, 1)
+        monitor.setTextColor(colors.yellow)
+        monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
+        
+        sleep(0.1)
+    end
 end
