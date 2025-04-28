@@ -1,6 +1,6 @@
--- Animated Dual Speedometer - FINAL Version (No changes needed here!)
+-- Animated Dual Speedometer - FINAL PARALLEL VERSION
 
-local monitorName = "top" -- Set your monitor side
+local monitorName = "top"
 local leftTrackName = "back"
 local rightTrackName = "bottom"
 
@@ -9,14 +9,14 @@ local leftTrack = peripheral.wrap(leftTrackName)
 local rightTrack = peripheral.wrap(rightTrackName)
 
 if not monitor then
-    print("ERROR: Monitor not found!")
+    print("Monitor not found!")
     return
 end
 
 monitor.setTextScale(0.5)
 local monitorWidth, monitorHeight = monitor.getSize()
 
--- Helpers
+-- Helper Functions
 local function clearMonitor()
     monitor.setBackgroundColor(colors.black)
     monitor.clear()
@@ -64,7 +64,7 @@ local function drawDial(cx, cy, radius, angle, speed, isConnected)
         drawPoint(cx, cy, "X", colors.red)
     end
 
-    -- Draw speed number
+    -- Speed number
     local speedText = isConnected and tostring(math.abs(math.floor(speed))) or "N/A"
     local direction = ""
     if isConnected then
@@ -127,22 +127,16 @@ local function moveAngleTowards(current, target, step)
     end
 end
 
--- Initial values
+-- Initial angles
 local displayedLeftAngle = 270
 local displayedRightAngle = 270
 
--- Main Loop
-while true do
-    local event, p1 = os.pullEvent()
+-- Control flag
+local running = true
 
-    if event == "shutdown_speedometer" then
-        clearMonitor()
-        term.setBackgroundColor(colors.black)
-        term.clear()
-        term.setCursorPos(1, 1)
-        print("Speedometer shutdown complete.")
-        break
-    else
+-- Main speedometer updating loop
+local function updateLoop()
+    while running do
         clearMonitor()
 
         local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
@@ -160,7 +154,28 @@ while true do
         monitor.setCursorPos(1, 1)
         monitor.setTextColor(colors.yellow)
         monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
-        
+
         sleep(0.1)
     end
 end
+
+-- Shutdown listening loop
+local function shutdownListener()
+    while true do
+        local event = os.pullEvent("shutdown_speedometer")
+        if event == "shutdown_speedometer" then
+            running = false
+            break
+        end
+    end
+end
+
+-- Run both loops at once
+parallel.waitForAny(updateLoop, shutdownListener)
+
+-- After shutdown
+clearMonitor()
+term.setBackgroundColor(colors.black)
+term.clear()
+term.setCursorPos(1, 1)
+print("Speedometer shutdown complete.")
