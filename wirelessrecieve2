@@ -21,21 +21,11 @@ end
 
 local function manageSpeedometer()
     while true do
-        local event = os.pullEvent()
-
-        if event == "toggle_speedometer" then
-            if speedometerRunning then
-                os.queueEvent("shutdown_speedometer")
-            else
-                os.queueEvent("start_speedometer")
-            end
-        elseif event == "start_speedometer" and not speedometerRunning then
-            speedometerRunning = true
-            shell.run("animatedspeedometer.lua")
-            -- when it finishes
-            speedometerRunning = false
-        elseif event == "shutdown_speedometer" and speedometerRunning then
+        local event = os.pullEvent("toggle_speedometer")
+        if speedometerRunning then
             os.queueEvent("shutdown_speedometer")
+        else
+            os.queueEvent("start_speedometer")
         end
     end
 end
