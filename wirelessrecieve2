@@ -5,48 +5,46 @@ if not modem then
     return
 end
 modem.open(channel)
-local speedometerRunning = false
-local speedometerActive = false
 
--- Create a shared file to communicate with animatedspeedometer.lua
-local function writeControlFile(state)
-    local file = fs.open("speedometer_control", "w")
-    file.write(state)
+-- Create a flag file to indicate if the speedometer should be running
+local function setSpeedometerFlag(state)
+    local file = fs.open("speedometer_flag", "w")
+    file.write(state and "1" or "0")
     file.close()
 end
 
--- Initialize control file
-writeControlFile("run")
+-- Get the current flag state
+local function getSpeedometerFlag()
+    if not fs.exists("speedometer_flag") then
+        setSpeedometerFlag(false)
+        return false
+    end
+    
+    local file = fs.open("speedometer_flag", "r")
+    local state = file.readAll() == "1"
+    file.close()
+    return state
+end
 
--- Listen for wireless button
-local function runReceiver()
-    while true do
-        local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
-        if senderChannel == channel and message == "button_pressed" then
-            os.queueEvent("toggle_speedometer")
-        end
+-- Toggle the speedometer flag
+local function toggleSpeedometer()
+    local currentState = getSpeedometerFlag()
+    setSpeedometerFlag(not currentState)
+    
+    if not currentState then
+        -- Starting the speedometer
+        print("Starting speedometer...")
+        shell.run("animatedspeedometer.lua")
+        -- When speedometer exits, reset the flag
+        setSpeedometerFlag(false)
+        print("Speedometer stopped.")
     end
 end
 
--- Manage toggling speedometer state
-local function manageSpeedometer()
-    while true do
-        local event = os.pullEvent("toggle_speedometer")
-        speedometerRunning = not speedometerRunning
-        
-        if speedometerRunning and not speedometerActive then
-            -- Mark as active and launch the speedometer
-            speedometerActive = true
-            -- Signal the speedometer to run
-            writeControlFile("run")
-            -- Launch the speedometer in a separate process
-            shell.run("bg", "animatedspeedometer.lua")
-        elseif not speedometerRunning and speedometerActive then
-            -- Signal the speedometer to stop
-            writeControlFile("stop")
-            speedometerActive = false
-        end
+-- Main receiver
+while true do
+    local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
+    if senderChannel == channel and message == "button_pressed" then
+        toggleSpeedometer()
     end
 end
-
-parallel.waitForAny(runReceiver, manageSpeedometer)
