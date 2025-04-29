@@ -1,3 +1,4 @@
+-- Simple launcher for the self-terminating speedometer
 local modem = peripheral.wrap("right")
 local channel = 1
 if not modem then
@@ -6,39 +7,14 @@ if not modem then
 end
 modem.open(channel)
 
--- Create a state file to control the speedometer
-local function setSpeedometerState(running)
-    local file = fs.open("speedometer_state", "w")
-    file.write(running and "running" or "stopped")
-    file.close()
-end
-
--- Initialize to stopped state
-setSpeedometerState(false)
-
--- Main loop to handle button presses
+-- Listen for the first button press to start the speedometer
+print("Waiting for button press to start speedometer...")
 while true do
     local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
     
     if senderChannel == channel and message == "button_pressed" then
-        -- Read current state
-        local file = fs.open("speedometer_state", "r")
-        local currentState = file.readAll()
-        file.close()
-        
-        if currentState == "stopped" then
-            -- Start the speedometer
-            print("Starting speedometer...")
-            setSpeedometerState(true)
-            shell.run("animatedspeedometer.lua")
-            -- When speedometer exits, set state to stopped
-            setSpeedometerState(false)
-            print("Speedometer stopped.")
-        else
-            -- Signal the speedometer to stop
-            print("Stopping speedometer...")
-            setSpeedometerState(false)
-            -- The speedometer will see this and stop itself
-        end
+        print("Starting speedometer...")
+        shell.run("animatedspeedometer.lua")
+        print("Speedometer exited. Waiting for button press to start again...")
     end
 end
