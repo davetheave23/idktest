@@ -1,86 +1,114 @@
--- Tank Fuel Gauge Display on Monitor
-local tankPeripheral = "front"  -- Tank sensor or block
-local monitorPeripheral = "right"  -- Monitor is on the right
+-- Fuel Gauge with Modem Toggle and Night Vision Style
+local tankPeripheral = "front"
+local monitorPeripheral = "right"
+local modemPeripheral = "left"
 local updateInterval = 1
-local barWidth = 20
+local maxCapacity = 32000
+local channel = 1
+local barWidth = 37
+local totalWidth = barWidth + 2
 
 -- Wrap peripherals
-local tank = peripheral.wrap(tankPeripheral)
 local monitor = peripheral.wrap(monitorPeripheral)
+local modem = peripheral.wrap(modemPeripheral)
 
--- Safety check
-if not monitor then
-    error("Monitor not found on side: " .. monitorPeripheral)
+if not monitor or not modem then
+    error("Monitor or modem not found.")
 end
 
--- Configure monitor
 monitor.setTextScale(1)
 monitor.setBackgroundColor(colors.black)
-monitor.setTextColor(colors.white)
 monitor.clear()
+monitor.setTextColor(colors.lime)
 
--- Function to draw the fuel bar
-local function drawFuelBar(percentage)
-    monitor.clear()
-    monitor.setCursorPos(1, 1)
-    monitor.write("Tank Fuel Gauge")
-    monitor.setCursorPos(1, 2)
-    monitor.write("--------------------")
+modem.open(channel)
 
-    -- Fuel % Text
-    monitor.setCursorPos(1, 4)
-    monitor.write("Fuel: " .. string.format("%3d", percentage) .. "%")
+-- State variable
+local displayEnabled = false
 
-    -- Draw bar outline
-    monitor.setCursorPos(1, 5)
-    monitor.write("[")
-    monitor.setCursorPos(barWidth + 2, 5)
-    monitor.write("]")
-
-    -- Filled portion
-    monitor.setCursorPos(2, 5)
-    if percentage >= 50 then
-        monitor.setBackgroundColor(colors.green)
-    elseif percentage >= 20 then
-        monitor.setBackgroundColor(colors.orange)
-    else
-        monitor.setBackgroundColor(colors.red)
-    end
-    monitor.write(string.rep(" ", math.floor((percentage / 100) * barWidth)))
-
-    -- Empty portion
-    monitor.setBackgroundColor(colors.gray)
-    monitor.write(string.rep(" ", barWidth - math.floor((percentage / 100) * barWidth)))
-
-    -- Reset colors
-    monitor.setBackgroundColor(colors.black)
+-- Helper: center text
+local function centerText(y, text)
+    local x = math.floor((totalWidth - #text) / 2) + 1
+    monitor.setCursorPos(x, y)
+    monitor.setTextColor(colors.lime)
+    monitor.write(text)
 end
 
--- Main loop
-while true do
-    tank = peripheral.wrap(tankPeripheral)  -- Re-wrap in case of reloads
+-- Draw fuel gauge (2-line bar)
+local function drawFuelGauge(current)
+    local percent = math.floor((current / maxCapacity) * 100)
+    percent = math.max(0, math.min(100, percent))
+    local fill = math.floor((percent / 100) * barWidth)
+    local empty = barWidth - fill
 
-    local fuelLevel = 0
-    if not tank then
-        monitor.clear()
-        monitor.setCursorPos(1, 1)
-        monitor.write("Tank not found on " .. tankPeripheral)
-    else
-        -- Read fuel value using available methods
-        if tank.getFuelLevel then
-            fuelLevel = tank.getFuelLevel()
-        elseif tank.getLine then
-            fuelLevel = tonumber(tank.getLine(1)) or 0
-        elseif tank.getText then
-            fuelLevel = tonumber(tank.getText()) or 0
-        elseif tank.readAll then
-            fuelLevel = tonumber(tank.readAll()) or 0
+    monitor.clear()
+
+    -- Title
+    centerText(1, "Fuel Gauge")
+
+    -- Bar (lines 3–4)
+    for row = 3, 4 do
+        -- Filled part (light gray)
+        monitor.setCursorPos(2, row)
+        monitor.setBackgroundColor(colors.lightGray)
+        monitor.write(string.rep(" ", fill))
+
+        -- Empty part (gray)
+        monitor.setBackgroundColor(colors.gray)
+        monitor.write(string.rep(" ", empty))
+
+        monitor.setBackgroundColor(colors.black)
+
+        -- Draw brackets (lime green)
+        monitor.setCursorPos(1, row)
+        monitor.setTextColor(colors.lime)
+        monitor.write("[")
+        monitor.setCursorPos(barWidth + 2, row)
+        monitor.write("]")
+    end
+
+    -- Fuel level text
+    local text = string.format("%d mB / %d mB (%d%%)", current, maxCapacity, percent)
+    centerText(5, text)
+end
+
+-- Modem listener (toggles display on/off)
+local function listenForToggle()
+    while true do
+        local event, side, senderChannel, replyChannel, message = os.pullEvent("modem_message")
+        if senderChannel == channel and message == "button_pressed" then
+            displayEnabled = not displayEnabled
+            if not displayEnabled then
+                monitor.setBackgroundColor(colors.black)
+                monitor.clear()
+            end
+        end
+    end
+end
+
+-- Gauge updater
+local function gaugeLoop()
+    while true do
+        if displayEnabled then
+            local tank = peripheral.wrap(tankPeripheral)
+            local current = 0
+
+            if tank then
+                local raw = ""
+                if tank.getText then raw = tank.getText()
+                elseif tank.readAll then raw = tank.readAll()
+                elseif tank.getLine then raw = tank.getLine(1) end
+
+                local value = string.match(raw, "(%d+)%s*mB")
+                current = tonumber(value) or 0
+            end
+
+            drawFuelGauge(current)
         end
 
-        -- Clamp to 0–100 and draw
-        fuelLevel = math.max(0, math.min(100, fuelLevel))
-        drawFuelBar(fuelLevel)
+        sleep(updateInterval)
     end
-
-    sleep(updateInterval)
 end
+
+-- Run both tasks
+parallel.waitForAny(gaugeLoop, listenForToggle)
