@@ -1,66 +1,83 @@
--- Tank Fuel Gauge Display - Enhanced Version
-local targetName = "front" -- Peripheral in front of the computer
-local updateInterval = 1   -- Update interval in seconds
-local barWidth = 20        -- Width of the fuel bar
+-- Tank Fuel Gauge Display on Monitor
+local tankPeripheral = "front"  -- Tank sensor or block
+local monitorPeripheral = "right"  -- Monitor is on the right
+local updateInterval = 1
+local barWidth = 20
 
--- Set up screen
-term.clear()
-term.setCursorPos(1, 1)
-print("Tank Fuel Gauge")
-print("---------------")
+-- Wrap peripherals
+local tank = peripheral.wrap(tankPeripheral)
+local monitor = peripheral.wrap(monitorPeripheral)
+
+-- Safety check
+if not monitor then
+    error("Monitor not found on side: " .. monitorPeripheral)
+end
+
+-- Configure monitor
+monitor.setTextScale(1)
+monitor.setBackgroundColor(colors.black)
+monitor.setTextColor(colors.white)
+monitor.clear()
 
 -- Function to draw the fuel bar
 local function drawFuelBar(percentage)
-    local filledBars = math.floor((percentage / 100) * barWidth)
-    local emptyBars = barWidth - filledBars
+    monitor.clear()
+    monitor.setCursorPos(1, 1)
+    monitor.write("Tank Fuel Gauge")
+    monitor.setCursorPos(1, 2)
+    monitor.write("--------------------")
 
-    term.setCursorPos(1, 4)
-    term.write("Fuel: " .. string.format("%3d", percentage) .. "%")
+    -- Fuel % Text
+    monitor.setCursorPos(1, 4)
+    monitor.write("Fuel: " .. string.format("%3d", percentage) .. "%")
 
     -- Draw bar outline
-    term.setCursorPos(1, 5)
-    term.write("[")
-    term.setCursorPos(barWidth + 2, 5)
-    term.write("]")
+    monitor.setCursorPos(1, 5)
+    monitor.write("[")
+    monitor.setCursorPos(barWidth + 2, 5)
+    monitor.write("]")
 
-    -- Draw filled portion
-    term.setCursorPos(2, 5)
-    term.setBackgroundColor(colors.green)
-    term.write(string.rep(" ", filledBars))
+    -- Filled portion
+    monitor.setCursorPos(2, 5)
+    if percentage >= 50 then
+        monitor.setBackgroundColor(colors.green)
+    elseif percentage >= 20 then
+        monitor.setBackgroundColor(colors.orange)
+    else
+        monitor.setBackgroundColor(colors.red)
+    end
+    monitor.write(string.rep(" ", math.floor((percentage / 100) * barWidth)))
 
-    -- Draw empty portion
-    term.setBackgroundColor(colors.gray)
-    term.write(string.rep(" ", emptyBars))
-    term.setBackgroundColor(colors.black) -- Reset
+    -- Empty portion
+    monitor.setBackgroundColor(colors.gray)
+    monitor.write(string.rep(" ", barWidth - math.floor((percentage / 100) * barWidth)))
+
+    -- Reset colors
+    monitor.setBackgroundColor(colors.black)
 end
 
 -- Main loop
 while true do
-    local target = peripheral.wrap(targetName)
+    tank = peripheral.wrap(tankPeripheral)  -- Re-wrap in case of reloads
 
-    -- Clear the bar area
-    for y = 4, 6 do
-        term.setCursorPos(1, y)
-        term.clearLine()
-    end
-
-    if not target then
-        term.setCursorPos(1, 4)
-        print("No peripheral found on " .. targetName)
+    local fuelLevel = 0
+    if not tank then
+        monitor.clear()
+        monitor.setCursorPos(1, 1)
+        monitor.write("Tank not found on " .. tankPeripheral)
     else
-        -- Attempt to get fuel level
-        local fuelLevel = 0
-        if target.getFuelLevel then
-            fuelLevel = target.getFuelLevel()
-        elseif target.getLine then
-            fuelLevel = tonumber(target.getLine(1)) or 0
-        elseif target.getText then
-            fuelLevel = tonumber(target.getText()) or 0
-        elseif target.readAll then
-            fuelLevel = tonumber(target.readAll()) or 0
+        -- Read fuel value using available methods
+        if tank.getFuelLevel then
+            fuelLevel = tank.getFuelLevel()
+        elseif tank.getLine then
+            fuelLevel = tonumber(tank.getLine(1)) or 0
+        elseif tank.getText then
+            fuelLevel = tonumber(tank.getText()) or 0
+        elseif tank.readAll then
+            fuelLevel = tonumber(tank.readAll()) or 0
         end
 
-        -- Clamp fuelLevel and draw
+        -- Clamp to 0–100 and draw
         fuelLevel = math.max(0, math.min(100, fuelLevel))
         drawFuelBar(fuelLevel)
     end
