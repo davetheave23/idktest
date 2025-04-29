@@ -1,7 +1,7 @@
 -- ComputerCraft Fuel Gauge for 1x4 Monitor
 -- Configuration
 local monitorSide = "right" -- Side where the monitor is connected
-local maxFuel = 16000       -- Maximum fuel capacity
+local maxFuel = 32000       -- Maximum fuel capacity
 local updateInterval = 0.5  -- Update interval in seconds
 local targetName = "front" -- Name of the target peripheral (CC:Tweaked bridge)
 
@@ -112,10 +112,12 @@ function getFuelLevel()
         return math.random(0, maxFuel)
     end
     
-    -- Try to get fuel level from target
+    -- Try to get fuel level from line 1 of the target block
     local success, result = pcall(function()
-        -- This is a placeholder - adjust based on your specific CC:Tweaked bridge setup
-        return target.getFuelLevel()
+        -- Read the first line of data from the target block
+        local line = target.getLine(1)
+        -- Convert the string to a number
+        return tonumber(line) or 0
     end)
     
     if not success then
