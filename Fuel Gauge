@@ -1,71 +1,69 @@
--- Simple debug script to read value from target block
--- Configuration
+-- Tank Fuel Gauge Display - Enhanced Version
 local targetName = "front" -- Peripheral in front of the computer
 local updateInterval = 1   -- Update interval in seconds
+local barWidth = 20        -- Width of the fuel bar
 
--- Clear the screen
+-- Set up screen
 term.clear()
 term.setCursorPos(1, 1)
-print("Target Block Value Reader")
-print("------------------------")
-print("Checking peripheral on " .. targetName .. " side")
+print("Tank Fuel Gauge")
+print("---------------")
+
+-- Function to draw the fuel bar
+local function drawFuelBar(percentage)
+    local filledBars = math.floor((percentage / 100) * barWidth)
+    local emptyBars = barWidth - filledBars
+
+    term.setCursorPos(1, 4)
+    term.write("Fuel: " .. string.format("%3d", percentage) .. "%")
+
+    -- Draw bar outline
+    term.setCursorPos(1, 5)
+    term.write("[")
+    term.setCursorPos(barWidth + 2, 5)
+    term.write("]")
+
+    -- Draw filled portion
+    term.setCursorPos(2, 5)
+    term.setBackgroundColor(colors.green)
+    term.write(string.rep(" ", filledBars))
+
+    -- Draw empty portion
+    term.setBackgroundColor(colors.gray)
+    term.write(string.rep(" ", emptyBars))
+    term.setBackgroundColor(colors.black) -- Reset
+end
 
 -- Main loop
 while true do
-    -- Try to wrap the peripheral
     local target = peripheral.wrap(targetName)
-    
-    -- Clear the bottom part of the screen
-    term.setCursorPos(1, 5)
-    term.clearLine()
-    term.setCursorPos(1, 6)
-    term.clearLine()
-    term.setCursorPos(1, 7)
-    term.clearLine()
-    term.setCursorPos(1, 8)
-    term.clearLine()
-    
-    term.setCursorPos(1, 5)
-    
-    if not target then
-        print("No peripheral found on " .. targetName .. " side")
-    else
-        -- List available methods
-        print("Available methods:")
-        local methods = {}
-        for method, _ in pairs(target) do
-            table.insert(methods, method)
-        end
-        print(table.concat(methods, ", "))
-        
-        -- Try different methods to read data
-        term.setCursorPos(1, 7)
-        
-        -- Method 1: getLine
-        if target.getLine then
-            local value = target.getLine(1)
-            print("getLine(1): [" .. tostring(value) .. "]")
-        end
-        
-        -- Method 2: readLine
-        if target.readLine then
-            local value = target.readLine(1)
-            print("readLine(1): [" .. tostring(value) .. "]")
-        end
-        
-        -- Method 3: getText
-        if target.getText then
-            local value = target.getText()
-            print("getText(): [" .. tostring(value) .. "]")
-        end
-        
-        -- Method 4: read all text
-        if target.readAll then
-            local value = target.readAll()
-            print("readAll(): [" .. tostring(value) .. "]")
-        end
+
+    -- Clear the bar area
+    for y = 4, 6 do
+        term.setCursorPos(1, y)
+        term.clearLine()
     end
-    
-    -- Wait before trying again
+
+    if not target then
+        term.setCursorPos(1, 4)
+        print("No peripheral found on " .. targetName)
+    else
+        -- Attempt to get fuel level
+        local fuelLevel = 0
+        if target.getFuelLevel then
+            fuelLevel = target.getFuelLevel()
+        elseif target.getLine then
+            fuelLevel = tonumber(target.getLine(1)) or 0
+        elseif target.getText then
+            fuelLevel = tonumber(target.getText()) or 0
+        elseif target.readAll then
+            fuelLevel = tonumber(target.readAll()) or 0
+        end
+
+        -- Clamp fuelLevel and draw
+        fuelLevel = math.max(0, math.min(100, fuelLevel))
+        drawFuelBar(fuelLevel)
+    end
+
     sleep(updateInterval)
 end
