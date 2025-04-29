@@ -2,7 +2,7 @@
 local targetName = "front" -- Peripheral side
 local updateInterval = 1   -- Seconds between updates
 local barWidth = 79        -- Monitor width (1x4 block = 79 chars wide)
-local monitor = peripheral.find("monitor") -- Detect monitor
+local monitor = peripheral.find("right") -- Detect monitor
 
 -- Setup monitor
 monitor.setTextScale(1)
