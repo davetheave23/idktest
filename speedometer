@@ -187,10 +187,6 @@ parallel.waitForAny(updateLoop, listenForButton)
 
 -- Clean up when exiting
 clearMonitor()
-monitor.setCursorPos(1, 1)
-monitor.setTextColor(colors.white)
-monitor.write("Speedometer stopped")
-
 term.setBackgroundColor(colors.black)
 term.clear()
 term.setCursorPos(1, 1)
