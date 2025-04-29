@@ -115,9 +115,37 @@ function getFuelLevel()
     -- Try to get fuel level from line 1 of the target block
     local success, result = pcall(function()
         -- Read the first line of data from the target block
-        local line = target.getLine(1)
+        local line = target.getLine and target.getLine(1) or target.readLine and target.readLine(1)
+        
+        -- Debug: Print the raw line data
+        print("Raw data from target block: " .. tostring(line))
+        
+        -- If line is nil, try alternative methods
+        if not line then
+            print("Trying alternative methods to read data...")
+            -- Try to read all text
+            if target.getText then
+                line = target.getText()
+                print("getText result: " .. tostring(line))
+            elseif target.readAll then
+                line = target.readAll()
+                print("readAll result: " .. tostring(line))
+            end
+        end
+        
+        -- Strip any whitespace
+        if line then
+            line = string.gsub(line, "^%s*(.-)%s*$", "%1")
+        end
+        
         -- Convert the string to a number
-        return tonumber(line) or 0
+        local value = tonumber(line)
+        
+        -- Print the parsed value
+        print("Parsed value: " .. tostring(value))
+        
+        -- Return the value or 0 if nil
+        return value or 0
     end)
     
     if not success then
@@ -131,8 +159,14 @@ end
 
 -- Main loop
 print("Fuel gauge running. Press Ctrl+T to terminate.")
+print("Debug information will appear here.")
 while true do
+    print("\n--- Update cycle ---")
     local fuelLevel = getFuelLevel()
+    print("Final fuel level: " .. tostring(fuelLevel))
+    print("Max fuel level: " .. tostring(maxFuel))
+    print("Percentage: " .. string.format("%.1f%%", (fuelLevel / maxFuel) * 100))
+    
     drawFuelGauge(fuelLevel)
     sleep(updateInterval)
 end
