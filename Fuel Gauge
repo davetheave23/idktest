@@ -1,51 +1,71 @@
 -- Simple debug script to read value from target block
 -- Configuration
 local targetName = "front" -- Peripheral in front of the computer
-local monitor = peripheral.wrap("right") -- Monitor on the right side
 local updateInterval = 1   -- Update interval in seconds
-local barWidth = 79        -- Monitor width
 
--- Clear the monitor
-monitor.setTextScale(1)
-monitor.setBackgroundColor(colors.black)
-monitor.setTextColor(colors.white)
-monitor.clear()
+-- Clear the screen
+term.clear()
+term.setCursorPos(1, 1)
+print("Target Block Value Reader")
+print("------------------------")
+print("Checking peripheral on " .. targetName .. " side")
 
 -- Main loop
 while true do
-    monitor.setCursorPos(1, 1)
-    monitor.clearLine()
-
     -- Try to wrap the peripheral
     local target = peripheral.wrap(targetName)
-    local fuel = nil
-
-    -- Try various methods to read value
-    if target and target.getFuelLevel then
-        fuel = target.getFuelLevel()
-    elseif target and target.getText then
-        fuel = tonumber(target.getText()) or 0
-    elseif target and target.readAll then
-        fuel = tonumber(target.readAll()) or 0
-    elseif target and target.getLine then
-        fuel = tonumber(target.getLine(1)) or 0
-    elseif target and target.readLine then
-        fuel = tonumber(target.readLine(1)) or 0
-    end
-
-    if fuel then
-        fuel = math.max(0, math.min(100, fuel)) -- Clamp 0–100
-
-        local percentText = string.format(" %3d%%", fuel)
-        local barLength = barWidth - #percentText
-        local filled = math.floor(barLength * fuel / 100)
-        local empty = barLength - filled
-        local bar = string.rep("█", filled) .. string.rep("░", empty)
-
-        monitor.write(bar .. percentText)
+    
+    -- Clear the bottom part of the screen
+    term.setCursorPos(1, 5)
+    term.clearLine()
+    term.setCursorPos(1, 6)
+    term.clearLine()
+    term.setCursorPos(1, 7)
+    term.clearLine()
+    term.setCursorPos(1, 8)
+    term.clearLine()
+    
+    term.setCursorPos(1, 5)
+    
+    if not target then
+        print("No peripheral found on " .. targetName .. " side")
     else
-        monitor.write("No valid fuel value detected from '" .. targetName .. "'")
+        -- List available methods
+        print("Available methods:")
+        local methods = {}
+        for method, _ in pairs(target) do
+            table.insert(methods, method)
+        end
+        print(table.concat(methods, ", "))
+        
+        -- Try different methods to read data
+        term.setCursorPos(1, 7)
+        
+        -- Method 1: getLine
+        if target.getLine then
+            local value = target.getLine(1)
+            print("getLine(1): [" .. tostring(value) .. "]")
+        end
+        
+        -- Method 2: readLine
+        if target.readLine then
+            local value = target.readLine(1)
+            print("readLine(1): [" .. tostring(value) .. "]")
+        end
+        
+        -- Method 3: getText
+        if target.getText then
+            local value = target.getText()
+            print("getText(): [" .. tostring(value) .. "]")
+        end
+        
+        -- Method 4: read all text
+        if target.readAll then
+            local value = target.readAll()
+            print("readAll(): [" .. tostring(value) .. "]")
+        end
     end
-
+    
+    -- Wait before trying again
     sleep(updateInterval)
 end
