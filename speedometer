@@ -1,36 +1,29 @@
--- Animated Dual Speedometer - FINAL PARALLEL VERSION
+-- Animated Dual Speedometer with Self-Termination
 
 local monitorName = "top"
 local leftTrackName = "back"
 local rightTrackName = "bottom"
+local modemName = "right"  -- Add modem here
+local channel = 1  -- Same channel as the button
 
+-- Wrap peripherals
 local monitor = peripheral.wrap(monitorName)
 local leftTrack = peripheral.wrap(leftTrackName)
 local rightTrack = peripheral.wrap(rightTrackName)
+local modem = peripheral.wrap(modemName)  -- Wrap the modem
 
 if not monitor then
     print("Monitor not found!")
     return
 end
 
--- Function to check if we should continue running
-local function shouldContinueRunning()
-    if not fs.exists("speedometer_state") then
-        return false
-    end
-    
-    local file = fs.open("speedometer_state", "r")
-    local state = file.readAll()
-    file.close()
-    
-    return state == "running"
-end
-
--- If we're not supposed to be running, exit immediately
-if not shouldContinueRunning() then
-    print("Speedometer start canceled - state is not running")
+if not modem then
+    print("Modem not found!")
     return
 end
+
+-- Open the channel to listen for button presses
+modem.open(channel)
 
 monitor.setTextScale(0.5)
 local monitorWidth, monitorHeight = monitor.getSize()
@@ -151,35 +144,54 @@ local displayedLeftAngle = 270
 local displayedRightAngle = 270
 
 -- Main speedometer updating loop
-while true do
-    -- Check if we should continue running
-    if not shouldContinueRunning() then
-        -- Clean up and exit
+local function updateLoop()
+    while true do
         clearMonitor()
-        term.setBackgroundColor(colors.black)
-        term.clear()
-        term.setCursorPos(1, 1)
-        print("Speedometer shutdown complete.")
-        return -- Exit program
+
+        local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
+        local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
+
+        local targetLeftAngle = speedToAngle(leftSpeed)
+        local targetRightAngle = speedToAngle(rightSpeed)
+
+        displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5)
+        displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
+
+        drawDial(10, 8, 7, displayedLeftAngle, leftSpeed, leftTrack ~= nil)
+        drawDial(30, 8, 7, displayedRightAngle, rightSpeed, rightTrack ~= nil)
+
+        monitor.setCursorPos(1, 1)
+        monitor.setTextColor(colors.yellow)
+        monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
+
+        sleep(0.1)
     end
-
-    clearMonitor()
-
-    local leftSpeed = leftTrack and getRawSpeed(leftTrack, 1) or 0
-    local rightSpeed = rightTrack and getRawSpeed(rightTrack, 2) or 0
-
-    local targetLeftAngle = speedToAngle(leftSpeed)
-    local targetRightAngle = speedToAngle(rightSpeed)
-
-    displayedLeftAngle = moveAngleTowards(displayedLeftAngle, targetLeftAngle, 5)
-    displayedRightAngle = moveAngleTowards(displayedRightAngle, targetRightAngle, 5)
-
-    drawDial(10, 8, 7, displayedLeftAngle, leftSpeed, leftTrack ~= nil)
-    drawDial(30, 8, 7, displayedRightAngle, rightSpeed, rightTrack ~= nil)
-
-    monitor.setCursorPos(1, 1)
-    monitor.setTextColor(colors.yellow)
-    monitor.write("L: " .. (leftTrack and "OK" or "X") .. " R: " .. (rightTrack and "OK" or "X"))
-
-    sleep(0.1)
 end
+
+-- Button message listener
+local function listenForButton()
+    while true do
+        local event, side, senderChannel, replyChannel, message, distance = os.pullEvent("modem_message")
+        
+        if senderChannel == channel and message == "button_pressed" then
+            -- If we receive a button press, exit the program
+            print("Button press detected, shutting down speedometer")
+            return -- This will exit the function and terminate the parallel waitForAny
+        end
+    end
+end
+
+-- Run both loops together
+print("Speedometer started - waiting for button press to exit")
+parallel.waitForAny(updateLoop, listenForButton)
+
+-- Clean up when exiting
+clearMonitor()
+monitor.setCursorPos(1, 1)
+monitor.setTextColor(colors.white)
+monitor.write("Speedometer stopped")
+
+term.setBackgroundColor(colors.black)
+term.clear()
+term.setCursorPos(1, 1)
+print("Speedometer shutdown complete.")
