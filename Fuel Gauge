@@ -1,36 +1,40 @@
+-- Simple debug script to read value from target block
 -- Configuration
-local targetName = "front" -- Fuel source peripheral side
-local monitorSide = "right" -- Fixed monitor side
-local updateInterval = 1   -- Seconds between updates
-local barWidth = 79        -- Monitor width in characters
+local targetName = "front" -- Peripheral in front of the computer
+local monitor = peripheral.wrap("right") -- Monitor on the right side
+local updateInterval = 1   -- Update interval in seconds
+local barWidth = 79        -- Monitor width
 
--- Wrap peripherals
-local monitor = peripheral.wrap(monitorSide)
-
--- Setup monitor
+-- Clear the monitor
 monitor.setTextScale(1)
 monitor.setBackgroundColor(colors.black)
 monitor.setTextColor(colors.white)
 monitor.clear()
 
+-- Main loop
 while true do
     monitor.setCursorPos(1, 1)
     monitor.clearLine()
-    
+
+    -- Try to wrap the peripheral
     local target = peripheral.wrap(targetName)
     local fuel = nil
 
-    -- Try different methods to get fuel value
+    -- Try various methods to read value
     if target and target.getFuelLevel then
         fuel = target.getFuelLevel()
     elseif target and target.getText then
         fuel = tonumber(target.getText()) or 0
     elseif target and target.readAll then
         fuel = tonumber(target.readAll()) or 0
+    elseif target and target.getLine then
+        fuel = tonumber(target.getLine(1)) or 0
+    elseif target and target.readLine then
+        fuel = tonumber(target.readLine(1)) or 0
     end
 
     if fuel then
-        fuel = math.max(0, math.min(100, fuel)) -- Clamp to 0–100
+        fuel = math.max(0, math.min(100, fuel)) -- Clamp 0–100
 
         local percentText = string.format(" %3d%%", fuel)
         local barLength = barWidth - #percentText
@@ -40,7 +44,7 @@ while true do
 
         monitor.write(bar .. percentText)
     else
-        monitor.write("No valid fuel value from '" .. targetName .. "'")
+        monitor.write("No valid fuel value detected from '" .. targetName .. "'")
     end
 
     sleep(updateInterval)
