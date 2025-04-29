@@ -1,0 +1,136 @@
+-- ComputerCraft Fuel Gauge for 1x4 Monitor
+-- Configuration
+local monitorSide = "right" -- Side where the monitor is connected
+local maxFuel = 16000       -- Maximum fuel capacity
+local updateInterval = 0.5  -- Update interval in seconds
+local targetName = "target" -- Name of the target peripheral (CC:Tweaked bridge)
+
+-- Colors
+local backgroundColor = colors.black
+local frameColor = colors.gray
+local fillColorFull = colors.lime
+local fillColorMid = colors.yellow
+local fillColorLow = colors.red
+local textColor = colors.white
+
+-- Initialize peripherals
+local monitor = peripheral.wrap(monitorSide)
+if not monitor then
+    error("Monitor not found on " .. monitorSide .. " side")
+end
+
+-- Set monitor scale for better visibility
+monitor.setTextScale(0.5)
+
+-- Get monitor dimensions
+local monitorWidth, monitorHeight = monitor.getSize()
+print("Monitor size: " .. monitorWidth .. "x" .. monitorHeight)
+
+-- Create a function to draw the fuel gauge
+function drawFuelGauge(fuelLevel)
+    monitor.setBackgroundColor(backgroundColor)
+    monitor.clear()
+    
+    -- Calculate percentage
+    local percentage = math.min(fuelLevel / maxFuel, 1)
+    local percentText = string.format("%.1f%%", percentage * 100)
+    local fuelText = string.format("%d/%d", fuelLevel, maxFuel)
+    
+    -- Determine fill color based on percentage
+    local fillColor
+    if percentage > 0.6 then
+        fillColor = fillColorFull
+    elseif percentage > 0.3 then
+        fillColor = fillColorMid
+    else
+        fillColor = fillColorLow
+    end
+    
+    -- Draw frame
+    local gaugeWidth = monitorWidth - 2
+    local gaugeHeight = monitorHeight - 4
+    local startX = 2
+    local startY = 3
+    
+    -- Draw outer frame
+    monitor.setBackgroundColor(frameColor)
+    for y = startY - 1, startY + gaugeHeight do
+        monitor.setCursorPos(startX - 1, y)
+        monitor.write(" ")
+        monitor.setCursorPos(startX + gaugeWidth, y)
+        monitor.write(" ")
+    end
+    
+    for x = startX, startX + gaugeWidth - 1 do
+        monitor.setCursorPos(x, startY - 1)
+        monitor.write(" ")
+        monitor.setCursorPos(x, startY + gaugeHeight)
+        monitor.write(" ")
+    end
+    
+    -- Draw gauge background
+    monitor.setBackgroundColor(backgroundColor)
+    for y = startY, startY + gaugeHeight - 1 do
+        monitor.setCursorPos(startX, y)
+        monitor.write(string.rep(" ", gaugeWidth))
+    end
+    
+    -- Draw filled portion
+    local fillWidth = math.floor(percentage * gaugeWidth)
+    monitor.setBackgroundColor(fillColor)
+    for y = startY, startY + gaugeHeight - 1 do
+        monitor.setCursorPos(startX, y)
+        monitor.write(string.rep(" ", fillWidth))
+    end
+    
+    -- Draw title
+    monitor.setBackgroundColor(backgroundColor)
+    monitor.setTextColor(textColor)
+    local title = "FUEL GAUGE"
+    monitor.setCursorPos(math.floor((monitorWidth - #title) / 2) + 1, 1)
+    monitor.write(title)
+    
+    -- Draw percentage text
+    monitor.setBackgroundColor(backgroundColor)
+    monitor.setTextColor(textColor)
+    monitor.setCursorPos(math.floor((monitorWidth - #percentText) / 2) + 1, startY + gaugeHeight + 1)
+    monitor.write(percentText)
+    
+    -- Draw fuel text
+    monitor.setBackgroundColor(backgroundColor)
+    monitor.setTextColor(textColor)
+    monitor.setCursorPos(math.floor((monitorWidth - #fuelText) / 2) + 1, startY + gaugeHeight + 2)
+    monitor.write(fuelText)
+end
+
+-- Function to get fuel level from target block
+function getFuelLevel()
+    local target = peripheral.wrap(targetName)
+    if not target then
+        print("Warning: Target peripheral not found. Using random data for testing.")
+        -- For testing, return random fuel level
+        return math.random(0, maxFuel)
+    end
+    
+    -- Try to get fuel level from target
+    local success, result = pcall(function()
+        -- This is a placeholder - adjust based on your specific CC:Tweaked bridge setup
+        return target.getFuelLevel()
+    end)
+    
+    if not success then
+        print("Error getting fuel level: " .. tostring(result))
+        -- Return a simulated value for testing
+        return math.random(0, maxFuel)
+    end
+    
+    return result
+end
+
+-- Main loop
+print("Fuel gauge running. Press Ctrl+T to terminate.")
+while true do
+    local fuelLevel = getFuelLevel()
+    drawFuelGauge(fuelLevel)
+    sleep(updateInterval)
+end
