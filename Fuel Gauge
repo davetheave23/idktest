@@ -3,7 +3,7 @@
 local monitorSide = "right" -- Side where the monitor is connected
 local maxFuel = 16000       -- Maximum fuel capacity
 local updateInterval = 0.5  -- Update interval in seconds
-local targetName = "target" -- Name of the target peripheral (CC:Tweaked bridge)
+local targetName = "front" -- Name of the target peripheral (CC:Tweaked bridge)
 
 -- Colors
 local backgroundColor = colors.black
